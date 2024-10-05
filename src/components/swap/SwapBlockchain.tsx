@@ -11,7 +11,7 @@ import buildClassName from '../../util/buildClassName';
 import { vibrate } from '../../util/capacitor';
 import { readClipboardContent } from '../../util/clipboard';
 import { shortenAddress } from '../../util/shortenAddress';
-import getBlockchainNetworkName from '../../util/swap/getBlockchainNetworkName';
+import getChainNetworkName from '../../util/swap/getChainNetworkName';
 import { IS_FIREFOX } from '../../util/windowEnvironment';
 import { callApi } from '../../api';
 import { ANIMATED_STICKERS_PATHS } from '../ui/helpers/animatedAssets';
@@ -51,8 +51,10 @@ function SwapBlockchain({
   tokenOut,
 }: OwnProps) {
   const {
-    cancelSwap, setSwapCexAddress,
-    showNotification, setSwapScreen,
+    cancelSwap,
+    setSwapCexAddress,
+    showNotification,
+    setSwapScreen,
     requestOpenQrScanner,
   } = getActions();
   const lang = useLang();
@@ -172,7 +174,7 @@ function SwapBlockchain({
     const text = hasToAddressError
       ? lang('Incorrect address.')
       : lang('Please provide an address of your wallet in %blockchain% blockchain to receive bought tokens.', {
-        blockchain: getBlockchainNetworkName(tokenOut?.blockchain),
+        blockchain: getChainNetworkName(tokenOut?.chain),
       });
 
     return (
@@ -232,8 +234,9 @@ function SwapBlockchain({
 
   const title = (lang('$swap_from_to', {
     from: tokenIn?.symbol,
+    icon: <i className={buildClassName('icon-arrow-right', styles.swapArrowIconTitle)} aria-hidden />,
     to: tokenOut?.symbol,
-  }) as TeactNode[]).join('');
+  }) as TeactNode[]);
 
   return (
     <>

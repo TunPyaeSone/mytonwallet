@@ -3,7 +3,7 @@ import React, {
 } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
-import { ActiveTab, ContentTab } from '../../global/types';
+import { ActiveTab, ContentTab, type Theme } from '../../global/types';
 
 import { IS_ANDROID_DIRECT, IS_CAPACITOR } from '../../config';
 import { selectCurrentAccount, selectCurrentAccountState } from '../../global/selectors';
@@ -14,14 +14,17 @@ import { setStatusBarStyle } from '../../util/switchTheme';
 import { IS_DELEGATED_BOTTOM_SHEET, IS_TOUCH_ENV, REM } from '../../util/windowEnvironment';
 import windowSize from '../../util/windowSize';
 
+import useBackgroundMode, { isBackgroundModeActive } from '../../hooks/useBackgroundMode';
 import { useOpenFromMainBottomSheet } from '../../hooks/useDelegatedBottomSheet';
 import { useDeviceScreen } from '../../hooks/useDeviceScreen';
 import useEffectOnce from '../../hooks/useEffectOnce';
+import useFlag from '../../hooks/useFlag';
+import useInterval from '../../hooks/useInterval';
 import useLastCallback from '../../hooks/useLastCallback';
 import usePreventPinchZoomGesture from '../../hooks/usePreventPinchZoomGesture';
 import useShowTransition from '../../hooks/useShowTransition';
 
-import MediaViewer from '../mediaViewer/MediaViewer';
+import InvoiceModal from '../receive/InvoiceModal';
 import ReceiveModal from '../receive/ReceiveModal';
 import StakeModal from '../staking/StakeModal';
 import StakingInfoModal from '../staking/StakingInfoModal';
@@ -51,9 +54,12 @@ type StateProps = {
   isSwapDisabled?: boolean;
   isOnRampDisabled?: boolean;
   isMediaViewerOpen?: boolean;
+  theme: Theme;
 };
 
 const STICKY_CARD_INTERSECTION_THRESHOLD = -3.75 * REM;
+const UPDATE_SWAPS_INTERVAL_NOT_FOCUSED = 15000; // 15 sec
+const UPDATE_SWAPS_INTERVAL = 3000; // 3 sec
 
 function Main({
   isActive,
@@ -66,6 +72,7 @@ function Main({
   isSwapDisabled,
   isOnRampDisabled,
   isMediaViewerOpen,
+  theme,
 }: OwnProps & StateProps) {
   const {
     selectToken,
@@ -77,6 +84,7 @@ function Main({
     setLandscapeActionsActiveTabIndex,
     loadExploreSites,
     openReceiveModal,
+    updatePendingSwaps,
   } = getActions();
 
   // eslint-disable-next-line no-null/no-null
@@ -86,6 +94,9 @@ function Main({
   const [canRenderStickyCard, setCanRenderStickyCard] = useState(false);
   const [shouldRenderDarkStatusBar, setShouldRenderDarkStatusBar] = useState(false);
   const safeAreaTop = IS_CAPACITOR ? getStatusBarHeight() : windowSize.get().safeAreaTop;
+  const [isFocused, markIsFocused, unmarkIsFocused] = useFlag(!isBackgroundModeActive());
+
+  useBackgroundMode(unmarkIsFocused, markIsFocused);
 
   useOpenFromMainBottomSheet('receive', openReceiveModal);
   usePreventPinchZoomGesture(isMediaViewerOpen);
@@ -99,8 +110,12 @@ function Main({
   useEffectOnce(loadExploreSites);
 
   useEffect(() => {
-    setStatusBarStyle(shouldRenderDarkStatusBar);
+    setStatusBarStyle({
+      forceDarkBackground: shouldRenderDarkStatusBar,
+    });
   }, [shouldRenderDarkStatusBar]);
+
+  useInterval(updatePendingSwaps, isFocused ? UPDATE_SWAPS_INTERVAL : UPDATE_SWAPS_INTERVAL_NOT_FOCUSED);
 
   useEffect(() => {
     if (!isPortrait || !isActive) {
@@ -190,10 +205,11 @@ function Main({
             hasStaking={isStakingActive}
             isTestnet={isTestnet}
             isUnstakeRequested={isUnstakeRequested}
-            onEarnClick={handleEarnClick}
             isLedger={isLedger}
             isSwapDisabled={isSwapDisabled}
             isOnRampDisabled={isOnRampDisabled}
+            theme={theme}
+            onEarnClick={handleEarnClick}
           />
         </div>
 
@@ -212,6 +228,7 @@ function Main({
             hasStaking={isStakingActive}
             isUnstakeRequested={isUnstakeRequested}
             isLedger={isLedger}
+            theme={theme}
           />
         </div>
         <div className={styles.main}>
@@ -228,8 +245,8 @@ function Main({
       <StakeModal />
       <StakingInfoModal isOpen={isStakingInfoModalOpen} onClose={closeStakingInfo} />
       <ReceiveModal />
+      <InvoiceModal />
       <UnstakeModal />
-      <MediaViewer />
       {IS_ANDROID_DIRECT && <UpdateAvailable />}
       <VestingModal />
       <VestingPasswordModal />
@@ -255,6 +272,7 @@ export default memo(
         isMediaViewerOpen: Boolean(global.mediaViewer?.mediaId),
         isSwapDisabled,
         isOnRampDisabled,
+        theme: global.settings.theme,
       };
     },
     (global, _, stickToFirst) => stickToFirst(global.currentAccountId),

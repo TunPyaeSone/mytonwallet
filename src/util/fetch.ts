@@ -1,11 +1,24 @@
-import { DEFAULT_ERROR_PAUSE, DEFAULT_RETRIES, DEFAULT_TIMEOUT } from '../config';
+import {
+  BRILLIANT_API_BASE_URL, DEFAULT_ERROR_PAUSE, DEFAULT_RETRIES, DEFAULT_TIMEOUT,
+} from '../config';
 import { ApiServerError } from '../api/errors';
 import { logDebug } from './logs';
 import { pause } from './schedulers';
 
 type QueryParams = Record<string, string | number | boolean | string[]>;
 
-const DEFAULT_TIMEOUTS = [15000, 30000]; // 15, 15, 30 sec
+const MAX_TIMEOUT = 30000; // 30 sec
+
+export async function fetchJsonWithProxy(url: string | URL, data?: QueryParams, init?: RequestInit) {
+  try {
+    return await fetchJson(url, data, init);
+  } catch (err) {
+    if (err instanceof ApiServerError && (!err.statusCode || err.statusCode === 403)) {
+      return fetchJson(`${BRILLIANT_API_BASE_URL}/proxy/?url=${url.toString()}`, data, init);
+    }
+    throw err;
+  }
+}
 
 export async function fetchJson(url: string | URL, data?: QueryParams, init?: RequestInit) {
   const urlObject = new URL(url);
@@ -37,7 +50,7 @@ export async function fetchWithRetry(url: string | URL, init?: RequestInit, opti
 }) {
   const {
     retries = DEFAULT_RETRIES,
-    timeouts = DEFAULT_TIMEOUTS,
+    timeouts = DEFAULT_TIMEOUT,
     shouldSkipRetryFn = isNotTemporaryError,
   } = options ?? {};
 
@@ -52,7 +65,7 @@ export async function fetchWithRetry(url: string | URL, init?: RequestInit, opti
 
       const timeout = Array.isArray(timeouts)
         ? timeouts[i - 1] ?? timeouts[timeouts.length - 1]
-        : timeouts;
+        : Math.min(timeouts * i, MAX_TIMEOUT);
       const response = await fetchWithTimeout(url, init, timeout);
       statusCode = response.status;
 
@@ -99,12 +112,17 @@ export async function fetchWithTimeout(url: string | URL, init?: RequestInit, ti
 
 export async function handleFetchErrors(response: Response, ignoreHttpCodes?: number[]) {
   if (!response.ok && (!ignoreHttpCodes?.includes(response.status))) {
-    const { error } = await response.json().catch(() => undefined);
+    // eslint-disable-next-line prefer-const
+    let { error, errors } = await response.json().catch(() => undefined);
+    if (!error && errors && errors.length) {
+      error = errors[0]?.msg;
+    }
+
     throw new ApiServerError(error ?? `HTTP Error ${response.status}`, response.status);
   }
   return response;
 }
 
 function isNotTemporaryError(message?: string, statusCode?: number) {
-  return statusCode === 400;
+  return statusCode && [400, 404].includes(statusCode);
 }

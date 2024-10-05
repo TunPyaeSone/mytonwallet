@@ -10,7 +10,7 @@ import {
   NOTCOIN_VOUCHERS_ADDRESS,
 } from '../../../../config';
 import renderText from '../../../../global/helpers/renderText';
-import { selectCurrentAccountState, selectIsHardwareAccount } from '../../../../global/selectors';
+import { selectCurrentAccountState } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
 import captureEscKeyListener from '../../../../util/captureEscKeyListener';
 import { IS_ANDROID_APP, IS_IOS_APP } from '../../../../util/windowEnvironment';
@@ -23,7 +23,7 @@ import useLastCallback from '../../../../hooks/useLastCallback';
 import AnimatedIconWithPreview from '../../../ui/AnimatedIconWithPreview';
 import Button from '../../../ui/Button';
 import Loading from '../../../ui/Loading';
-import HideNftModal from '../../modals/HideNftModal';
+import Transition from '../../../ui/Transition';
 import Nft from './Nft';
 
 import styles from './Nft.module.scss';
@@ -37,11 +37,9 @@ interface StateProps {
   selectedAddresses?: string[];
   byAddress?: Record<string, ApiNft>;
   currentCollectionAddress?: string;
-  isHardware?: boolean;
   isTestnet?: boolean;
   blacklistedNftAddresses?: string[];
-  isHideNftModalOpened?: boolean;
-  nftWithOpenedMenuAddress?: string;
+  whitelistedNftAddresses?: string[];
 }
 
 const GETGEMS_ENABLED = !IS_IOS_APP && !IS_ANDROID_APP;
@@ -52,13 +50,11 @@ function Nfts({
   selectedAddresses,
   byAddress,
   currentCollectionAddress,
-  isHardware,
   isTestnet,
   blacklistedNftAddresses,
-  isHideNftModalOpened,
-  nftWithOpenedMenuAddress,
+  whitelistedNftAddresses,
 }: OwnProps & StateProps) {
-  const { clearNftsSelection, burnNfts, closeHideNftModal } = getActions();
+  const { clearNftsSelection, burnNfts } = getActions();
 
   const lang = useLang();
   const { isLandscape } = useDeviceScreen();
@@ -74,6 +70,9 @@ function Nfts({
       return undefined;
     }
 
+    const blacklistedNftAddressesSet = new Set(blacklistedNftAddresses);
+    const whitelistedNftAddressesSet = new Set(whitelistedNftAddresses);
+
     return orderedAddresses
       .map((address) => byAddress[address])
       .filter((nft) => {
@@ -81,10 +80,11 @@ function Nfts({
 
         return !currentCollectionAddress || nft.collectionAddress === currentCollectionAddress;
       })
-      .filter((nft) => !nft.isHidden)
-      .filter((nft) => !blacklistedNftAddresses?.includes(nft.address));
+      .filter((nft) => (
+        !nft.isHidden || whitelistedNftAddressesSet.has(nft.address)
+      ) && !blacklistedNftAddressesSet.has(nft.address));
   }, [
-    byAddress, currentCollectionAddress, orderedAddresses, blacklistedNftAddresses,
+    byAddress, currentCollectionAddress, orderedAddresses, blacklistedNftAddresses, whitelistedNftAddresses,
   ]);
 
   const handleBurnNotcoinVouchersClick = useLastCallback(() => {
@@ -102,39 +102,22 @@ function Nfts({
   if (nfts.length === 0) {
     return (
       <div className={styles.emptyList}>
-        {!isHardware ? (
+        <AnimatedIconWithPreview
+          play={isActive}
+          tgsUrl={ANIMATED_STICKERS_PATHS.happy}
+          previewUrl={ANIMATED_STICKERS_PATHS.happyPreview}
+          size={ANIMATED_STICKER_BIG_SIZE_PX}
+          className={styles.sticker}
+          noLoop={false}
+          nonInteractive
+        />
+        <p className={styles.emptyListTitle}>{lang('No NFTs yet')}</p>
+        {GETGEMS_ENABLED && (
           <>
-            <AnimatedIconWithPreview
-              play={isActive}
-              tgsUrl={ANIMATED_STICKERS_PATHS.happy}
-              previewUrl={ANIMATED_STICKERS_PATHS.happyPreview}
-              size={ANIMATED_STICKER_BIG_SIZE_PX}
-              className={styles.sticker}
-              noLoop={false}
-              nonInteractive
-            />
-            <p className={styles.emptyListTitle}>{lang('No NFTs yet')}</p>
-            {GETGEMS_ENABLED && (
-              <>
-                <p className={styles.emptyListText}>{renderText(lang('$nft_explore_offer'))}</p>
-                <a className={styles.emptyListButton} href={getgemsBaseUrl} rel="noreferrer noopener" target="_blank">
-                  {lang('Open Getgems')}
-                </a>
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            <AnimatedIconWithPreview
-              play={isActive}
-              tgsUrl={ANIMATED_STICKERS_PATHS.noData}
-              previewUrl={ANIMATED_STICKERS_PATHS.noDataPreview}
-              size={ANIMATED_STICKER_BIG_SIZE_PX}
-              className={styles.sticker}
-              noLoop={false}
-              nonInteractive
-            />
-            <p className={styles.emptyListText}>{lang('$nft_hardware_unsupported')}</p>
+            <p className={styles.emptyListText}>{renderText(lang('$nft_explore_offer'))}</p>
+            <a className={styles.emptyListButton} href={getgemsBaseUrl} rel="noreferrer noopener" target="_blank">
+              {lang('Open Getgems')}
+            </a>
           </>
         )}
       </div>
@@ -154,10 +137,15 @@ function Nfts({
           {lang('Burn NOT Vouchers')}
         </Button>
       )}
-      <div className={buildClassName(styles.list, isLandscape && styles.landscapeList)}>
-        {nfts.map((nft) => <Nft key={nft.address} nft={nft} selectedAddresses={selectedAddresses} />)}
-      </div>
-      <HideNftModal isOpen={isHideNftModalOpened} onClose={closeHideNftModal} nftAddress={nftWithOpenedMenuAddress} />
+      <Transition
+        name="fade"
+        activeKey={nfts.length}
+        shouldCleanup
+      >
+        <div className={buildClassName(styles.list, isLandscape && styles.landscapeList)}>
+          {nfts.map((nft) => <Nft key={nft.address} nft={nft} selectedAddresses={selectedAddresses} />)}
+        </div>
+      </Transition>
     </div>
   );
 }
@@ -173,20 +161,17 @@ export default memo(
 
       const {
         blacklistedNftAddresses,
-        isHideNftModalOpened,
-        nftWithOpenedMenuAddress,
+        whitelistedNftAddresses,
       } = selectCurrentAccountState(global) || {};
 
       return {
         orderedAddresses,
         selectedAddresses,
         byAddress,
-        isHardware: selectIsHardwareAccount(global),
         currentCollectionAddress,
         isTestnet: global.settings.isTestnet,
         blacklistedNftAddresses,
-        isHideNftModalOpened,
-        nftWithOpenedMenuAddress,
+        whitelistedNftAddresses,
       };
     },
     (global, _, stickToFirst) => {

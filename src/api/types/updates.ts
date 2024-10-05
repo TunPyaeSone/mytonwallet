@@ -1,3 +1,4 @@
+import type { ApiTonWalletVersion } from '../chains/ton/types';
 import type { ApiTonConnectProof } from '../tonConnect/types';
 import type { ApiActivity, ApiTransactionActivity } from './activity';
 import type { ApiStakingCommonData, ApiSwapAsset, ApiVestingInfo } from './backend';
@@ -6,15 +7,16 @@ import type {
   ApiBackendStakingState,
   ApiBalanceBySlug,
   ApiBaseCurrency,
+  ApiChain,
+  ApiCountryCode,
   ApiDappTransfer,
   ApiNft,
   ApiStakingState,
-  ApiToken,
+  ApiTokenWithPrice,
   ApiWalletInfo,
-  ApiWalletVersion,
 } from './misc';
 import type { ApiParsedPayload } from './payload';
-import type { ApiAccount, ApiDapp } from './storage';
+import type { ApiDapp, ApiTonWallet } from './storage';
 
 export type ApiUpdateBalances = {
   type: 'updateBalances';
@@ -25,7 +27,9 @@ export type ApiUpdateBalances = {
 export type ApiUpdateNewActivities = {
   type: 'newActivities';
   accountId: string;
+  chain: ApiChain;
   activities: ApiActivity[];
+  noForward?: boolean; // Forbid cyclic update redirection to/from NBS
 };
 
 export type ApiUpdateNewLocalTransaction = {
@@ -36,7 +40,7 @@ export type ApiUpdateNewLocalTransaction = {
 
 export type ApiUpdateTokens = {
   type: 'updateTokens';
-  tokens: Record<string, ApiToken>;
+  tokens: Record<string, ApiTokenWithPrice>;
   baseCurrency: ApiBaseCurrency;
 };
 
@@ -89,10 +93,12 @@ export type ApiUpdateDappSendTransactions = {
   dapp: ApiDapp;
   transactions: ApiDappTransfer[];
   fee: bigint;
+  vestingAddress?: string;
 };
 
 export type ApiUpdateDappConnect = {
   type: 'dappConnect';
+  identifier?: string;
   promiseId: string;
   accountId: string;
   dapp: ApiDapp;
@@ -134,6 +140,7 @@ export type ApiUpdatePrepareTransaction = {
   amount?: bigint;
   comment?: string;
   binPayload?: string;
+  stateInit?: string;
 };
 
 export type ApiUpdateProcessDeeplink = {
@@ -171,7 +178,7 @@ export type ApiNftUpdate = ApiUpdateNftReceived | ApiUpdateNftSent | ApiUpdateNf
 export type ApiUpdateAccount = {
   type: 'updateAccount';
   accountId: string;
-  partial: Partial<ApiAccount>;
+  partial: Partial<ApiTonWallet>;
 };
 
 export type ApiUpdateConfig = {
@@ -179,12 +186,13 @@ export type ApiUpdateConfig = {
   isLimited: boolean;
   isCopyStorageEnabled: boolean;
   supportAccountsCount?: number;
+  countryCode?: ApiCountryCode;
 };
 
 export type ApiUpdateWalletVersions = {
   type: 'updateWalletVersions';
   accountId: string;
-  currentVersion: ApiWalletVersion;
+  currentVersion: ApiTonWalletVersion;
   versions: ApiWalletInfo[];
 };
 

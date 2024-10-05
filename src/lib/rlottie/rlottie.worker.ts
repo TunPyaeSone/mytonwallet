@@ -12,7 +12,11 @@ declare function intArrayFromString(str: String): string;
 
 declare const self: WorkerGlobalScope;
 
-self.importScripts('rlottie-wasm.js');
+try {
+  self.importScripts('rlottie-wasm.js');
+} catch (err) {
+  throw new Error('Failed to import rlottie-wasm.js');
+}
 
 let rLottieApi: Record<string, Function>;
 const rLottieApiPromise = new Promise<void>((resolve) => {

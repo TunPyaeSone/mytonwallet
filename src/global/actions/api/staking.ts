@@ -1,7 +1,8 @@
+import type { ApiTransactionError } from '../../../api/types';
 import { StakingState } from '../../types';
 
 import {
-  IS_CAPACITOR, MIN_BALANCE_FOR_UNSTAKE, TONCOIN_SLUG,
+  IS_CAPACITOR, MIN_BALANCE_FOR_UNSTAKE, TONCOIN,
 } from '../../../config';
 import { vibrateOnSuccess } from '../../../util/capacitor';
 import { callActionInMain } from '../../../util/multitab';
@@ -27,7 +28,7 @@ addActionHandler('startStaking', (global, actions, payload) => {
   const { isUnstaking } = payload || {};
 
   const accountState = selectAccountState(global, global.currentAccountId!);
-  const balance = accountState?.balances?.bySlug[TONCOIN_SLUG] ?? 0n;
+  const balance = accountState?.balances?.bySlug[TONCOIN.slug] ?? 0n;
   const isNotEnoughBalance = balance < MIN_BALANCE_FOR_UNSTAKE;
 
   const state = isUnstaking
@@ -240,7 +241,13 @@ addActionHandler('submitStakingPassword', async (global, actions, payload) => {
 
 addActionHandler('submitStakingHardware', async (global, actions, payload) => {
   const { isUnstaking } = payload || {};
-  const { fee, amount } = global.staking;
+  const {
+    fee,
+    amount,
+    type,
+    tokenAmount,
+  } = global.staking;
+  const { currentAccountId } = global;
 
   global = updateStaking(global, {
     isLoading: true,
@@ -252,15 +259,28 @@ addActionHandler('submitStakingHardware', async (global, actions, payload) => {
   const ledgerApi = await import('../../../util/ledger');
   global = getGlobal();
 
-  let result: string | undefined;
+  let result: string | { error: ApiTransactionError } | undefined;
   const accountId = global.currentAccountId!;
 
   if (isUnstaking) {
-    result = await ledgerApi.submitLedgerUnstake(accountId);
+    const { instantAvailable } = global.stakingInfo.liquid ?? {};
+    const stakingBalance = selectAccountState(global, currentAccountId!)!.staking!.balance;
+    const unstakeAmount = type === 'nominators' ? stakingBalance : tokenAmount!;
+
+    result = await ledgerApi.submitLedgerUnstake(accountId, type!, unstakeAmount);
+
+    const isLongUnstakeRequested = Boolean(
+      type === 'nominators' || (type === 'liquid' && instantAvailable && instantAvailable < stakingBalance),
+    );
+
+    global = getGlobal();
+    global = updateAccountState(global, currentAccountId!, { isLongUnstakeRequested });
+    setGlobal(global);
   } else {
     result = await ledgerApi.submitLedgerStake(
       accountId,
       amount!,
+      type!,
       fee,
     );
   }
@@ -275,6 +295,8 @@ addActionHandler('submitStakingHardware', async (global, actions, payload) => {
         ? 'Unstaking was unsuccessful. Try again later.'
         : 'Staking was unsuccessful. Try again later.',
     });
+  } else if (typeof result !== 'string' && 'error' in result) {
+    actions.showError({ error: result.error });
   } else {
     global = getGlobal();
     global = updateStaking(global, {

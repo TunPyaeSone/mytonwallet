@@ -7,7 +7,9 @@ import { callActionInMain } from '../../../util/multitab';
 import { pause, waitFor } from '../../../util/schedulers';
 import { IS_DELEGATED_BOTTOM_SHEET } from '../../../util/windowEnvironment';
 import { callApi } from '../../../api';
-import { ApiUserRejectsError } from '../../../api/errors';
+import {
+  ApiHardwareBlindSigningNotEnabled, ApiUnsupportedVersionError, ApiUserRejectsError,
+} from '../../../api/errors';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import {
   clearConnectedDapps,
@@ -21,7 +23,7 @@ import {
   updateCurrentDappTransfer,
   updateDappConnectRequest,
 } from '../../reducers';
-import { selectAccount, selectIsHardwareAccount, selectNewestTxIds } from '../../selectors';
+import { selectIsHardwareAccount, selectNewestTxTimestamps } from '../../selectors';
 
 import { getIsPortrait } from '../../../hooks/useDeviceScreen';
 
@@ -76,7 +78,7 @@ addActionHandler(
   'submitDappConnectRequestConfirmHardware',
   async (global, actions, { accountId: connectAccountId }) => {
     const {
-      accountId, promiseId, proof,
+      promiseId, proof,
     } = global.dappConnectRequest!;
 
     global = getGlobal();
@@ -89,7 +91,7 @@ addActionHandler(
     const ledgerApi = await import('../../../util/ledger');
 
     try {
-      const signature = await ledgerApi.signLedgerProof(accountId!, proof!);
+      const signature = await ledgerApi.signLedgerProof(connectAccountId!, proof!);
       actions.switchAccount({ accountId: connectAccountId });
       await callApi('confirmDappRequestConnect', promiseId!, {
         accountId: connectAccountId,
@@ -202,8 +204,8 @@ addActionHandler('submitDappTransferPassword', async (global, actions, { passwor
   setGlobal(global);
 });
 
-addActionHandler('submitDappTransferHardware', async (global) => {
-  const { promiseId, transactions } = global.currentDappTransfer;
+addActionHandler('submitDappTransferHardware', async (global, actions) => {
+  const { promiseId, transactions, vestingAddress } = global.currentDappTransfer;
 
   if (!promiseId) {
     return;
@@ -221,10 +223,24 @@ addActionHandler('submitDappTransferHardware', async (global) => {
   const ledgerApi = await import('../../../util/ledger');
 
   try {
-    const signedMessages = await ledgerApi.signLedgerTransactions(accountId, transactions!);
+    const signedMessages = await ledgerApi.signLedgerTransactions(accountId, transactions!, {
+      isTonConnect: true,
+      vestingAddress,
+    });
     void callApi('confirmDappRequest', promiseId, signedMessages);
   } catch (err) {
-    if (err instanceof ApiUserRejectsError) {
+    if (err instanceof ApiHardwareBlindSigningNotEnabled) {
+      setGlobal(updateCurrentDappTransfer(getGlobal(), {
+        isLoading: false,
+        error: '$hardware_blind_sign_not_enabled',
+      }));
+      return;
+    } else if (err instanceof ApiUnsupportedVersionError) {
+      actions.showError({
+        error: '$ledger_unsupported_ton_connect',
+      });
+      void callApi('cancelDappRequest', promiseId, err.message);
+    } else if (err instanceof ApiUserRejectsError) {
       setGlobal(updateCurrentDappTransfer(getGlobal(), {
         isLoading: false,
         error: 'Canceled by the user',
@@ -240,13 +256,20 @@ addActionHandler('submitDappTransferHardware', async (global) => {
   setGlobal(global);
 });
 
-addActionHandler('getDapps', async (global) => {
+addActionHandler('getDapps', async (global, actions) => {
   const { currentAccountId } = global;
 
-  const result = await callApi('getDapps', currentAccountId!);
+  let result = await callApi('getDapps', currentAccountId!);
 
   if (!result) {
     return;
+  }
+
+  // Check for broken dapps without origin
+  const brokenDapp = result.find(({ origin }) => !origin);
+  if (brokenDapp) {
+    actions.deleteDapp({ origin: brokenDapp.origin });
+    result = result.filter(({ origin }) => origin);
   }
 
   global = getGlobal();
@@ -290,8 +313,6 @@ addActionHandler('apiUpdateDappConnect', async (global, actions, {
     global = getGlobal();
   }
 
-  const { isHardware } = selectAccount(global, accountId)!;
-
   global = updateDappConnectRequest(global, {
     state: DappConnectState.Info,
     promiseId,
@@ -299,7 +320,7 @@ addActionHandler('apiUpdateDappConnect', async (global, actions, {
     dapp,
     permissions: {
       isAddressRequired: permissions.address,
-      isPasswordRequired: permissions.proof && !isHardware,
+      isPasswordRequired: permissions.proof,
     },
     proof,
   });
@@ -314,11 +335,12 @@ addActionHandler('apiUpdateDappSendTransaction', async (global, actions, {
   fee,
   accountId,
   dapp,
+  vestingAddress,
 }) => {
   const { currentAccountId, currentDappTransfer: { promiseId: currentPromiseId } } = global;
   if (currentAccountId !== accountId) {
-    const newestTxIds = selectNewestTxIds(global, accountId);
-    await callApi('activateAccount', accountId, newestTxIds);
+    const nextNewestTxTimestamps = selectNewestTxTimestamps(global, accountId);
+    await callApi('activateAccount', accountId, nextNewestTxTimestamps);
     global = getGlobal();
     setGlobal(updateCurrentAccountId(global, accountId));
   }
@@ -350,6 +372,7 @@ addActionHandler('apiUpdateDappSendTransaction', async (global, actions, {
     transactions,
     fee,
     dapp,
+    vestingAddress,
   });
   setGlobal(global);
 });

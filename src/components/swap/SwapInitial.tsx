@@ -3,7 +3,7 @@ import React, {
 } from '../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../global';
 
-import type { GlobalState, UserSwapToken } from '../../global/types';
+import type { Account, GlobalState, UserSwapToken } from '../../global/types';
 import { SwapInputSource, SwapState, SwapType } from '../../global/types';
 
 import {
@@ -14,11 +14,11 @@ import {
   CHANGELLY_TERMS_OF_USE,
   DEFAULT_FEE,
   DEFAULT_SWAP_SECOND_TOKEN_SLUG,
-  TON_SYMBOL,
-  TONCOIN_SLUG,
+  DIESEL_TOKENS,
+  TONCOIN,
 } from '../../config';
 import { Big } from '../../lib/big.js';
-import { selectSwapTokens } from '../../global/selectors';
+import { selectCurrentAccount, selectSwapTokens } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import { vibrate } from '../../util/capacitor';
 import { fromDecimal, toDecimal } from '../../util/decimals';
@@ -51,6 +51,7 @@ interface OwnProps {
 }
 
 interface StateProps {
+  addressByChain?: Account['addressByChain'];
   currentSwap: GlobalState['currentSwap'];
   accountId?: string;
   tokens?: UserSwapToken[];
@@ -79,8 +80,10 @@ function SwapInitial({
     pairs,
     isSettingsModalOpen,
     dieselStatus,
+    swapFee,
   },
   accountId,
+  addressByChain,
   tokens,
   isActive,
   isStatic,
@@ -110,7 +113,7 @@ function SwapInitial({
 
   const [hasAmountInError, setHasAmountInError] = useState(false);
 
-  const currentTokenInSlug = tokenInSlug ?? TONCOIN_SLUG;
+  const currentTokenInSlug = tokenInSlug ?? TONCOIN.slug;
   const currentTokenOutSlug = tokenOutSlug ?? DEFAULT_SWAP_SECOND_TOKEN_SLUG;
 
   const tokenInTransitionKey = useTokenTransitionKey(currentTokenInSlug ?? '');
@@ -128,11 +131,11 @@ function SwapInitial({
   );
 
   const toncoin = useMemo(
-    () => tokens?.find((token) => token.slug === TONCOIN_SLUG) ?? { amount: 0 },
+    () => tokens?.find((token) => token.slug === TONCOIN.slug) ?? { amount: 0 },
     [tokens],
   );
 
-  const isToncoinIn = currentTokenInSlug === TONCOIN_SLUG;
+  const isToncoinIn = currentTokenInSlug === TONCOIN.slug;
   const totalToncoinAmount = useMemo(
     () => {
       if (!tokenIn || !amountIn) {
@@ -152,6 +155,10 @@ function SwapInitial({
 
   const isErrorExist = errorType !== undefined;
   const isEnoughToncoin = toncoin.amount > totalToncoinAmount;
+  const isDieselSwap = swapType === SwapType.OnChain
+    && !isEnoughToncoin
+    && tokenIn?.tokenAddress
+    && DIESEL_TOKENS.has(tokenIn.tokenAddress);
 
   // eslint-disable-next-line max-len
   const isCorrectAmountIn = Boolean(
@@ -229,10 +236,10 @@ function SwapInitial({
   }, [accountId, accountIdPrev, currentTokenInSlug, currentTokenOutSlug]);
 
   useEffect(() => {
-    if (tokenIn?.blockchain === 'ton' && tokenOut?.blockchain !== 'ton') {
+    if (tokenIn?.chain === 'ton' && tokenOut?.chain !== 'ton') {
       setSwapType({ type: SwapType.CrosschainFromToncoin });
       return;
-    } else if (tokenOut?.blockchain === 'ton' && tokenIn?.blockchain !== 'ton') {
+    } else if (tokenOut?.chain === 'ton' && tokenIn?.chain !== 'ton') {
       setSwapType({ type: SwapType.CrosschainToToncoin });
       return;
     }
@@ -307,7 +314,7 @@ function SwapInitial({
       return;
     }
 
-    if (!isEnoughToncoin && dieselStatus === 'not-authorized') {
+    if (isDieselSwap && dieselStatus === 'not-authorized') {
       authorizeDiesel();
       return;
     }
@@ -317,6 +324,9 @@ function SwapInitial({
     if (isCrosschain) {
       setSwapCexAddress({ toAddress: '' });
       if (swapType === SwapType.CrosschainToToncoin) {
+        setSwapScreen({ state: SwapState.Password });
+      } else if (tokenOut!.chain === 'tron' && addressByChain?.tron) {
+        setSwapCexAddress({ toAddress: addressByChain.tron });
         setSwapScreen({ state: SwapState.Password });
       } else {
         setSwapScreen({ state: SwapState.Blockchain });
@@ -373,6 +383,9 @@ function SwapInitial({
   function renderPrice() {
     const isPriceVisible = Boolean(amountIn && amountOut);
     const shouldBeRendered = isPriceVisible && !isEstimating;
+
+    if (!shouldBeRendered) return undefined;
+
     const rate = getSwapRate(
       amountIn ? String(amountIn) : undefined,
       amountOut ? String(amountOut) : undefined,
@@ -384,21 +397,12 @@ function SwapInitial({
     if (!rate) return undefined;
 
     return (
-      <Transition
-        name="fade"
-        activeKey={shouldBeRendered ? 0 : 1}
-      >
-        <div className={styles.priceContainer}>
-          {shouldBeRendered && (
-            <span className={styles.tokenPrice}>
-              {rate.firstCurrencySymbol}{' ≈ '}
-              <span className={styles.tokenPriceBold}>
-                {rate.price}{' '}{rate.secondCurrencySymbol}
-              </span>
-            </span>
-          )}
-        </div>
-      </Transition>
+      <span className={styles.tokenPrice}>
+        {rate.firstCurrencySymbol}{' ≈ '}
+        <span className={styles.tokenPriceBold}>
+          {rate.price}{' '}{rate.secondCurrencySymbol}
+        </span>
+      </span>
     );
   }
 
@@ -469,17 +473,41 @@ function SwapInitial({
   }
 
   function renderFee() {
-    if (swapType === SwapType.CrosschainToToncoin) return undefined;
-
     const isFeeEqualZero = realNetworkFee === 0;
-    const text = lang(isFeeEqualZero ? '$fee_value' : '$fee_value_almost_equal', {
-      fee: formatCurrency(realNetworkFee, TON_SYMBOL),
-    });
+
+    let feeBlock: React.JSX.Element | undefined;
+
+    if (
+      swapType === SwapType.OnChain
+      && isDieselSwap
+      && swapFee
+      && tokenIn
+      && tokenIn?.slug !== TONCOIN.slug
+      && !isLoading
+    ) {
+      // Diesel swap
+      feeBlock = (
+        <span className={styles.feeText}>{lang('$fee_value', {
+          fee: formatCurrency(swapFee, tokenIn.symbol),
+        })}
+        </span>
+      );
+    } else if (swapType !== SwapType.CrosschainToToncoin) {
+      feeBlock = (
+        <span className={styles.feeText}>{lang(isFeeEqualZero ? '$fee_value' : '$fee_value_almost_equal', {
+          fee: formatCurrency(realNetworkFee, TONCOIN.symbol),
+        })}
+        </span>
+      );
+    }
+
+    const priceBlock = renderPrice();
+    const activeKey = (isFeeEqualZero ? 0 : 1) + (priceBlock ? 2 : 3);
 
     return (
       <Transition
         name="fade"
-        activeKey={isFeeEqualZero ? 0 : 1}
+        activeKey={activeKey}
         className={styles.feeWrapper}
       >
         <div
@@ -489,7 +517,9 @@ function SwapInitial({
           )}
           onClick={isCrosschain ? undefined : openSettingsModal}
         >
-          <span className={styles.feeText}>{text}</span>
+          {priceBlock}
+          {feeBlock}
+
           {
             isCrosschain
               ? undefined
@@ -530,11 +560,10 @@ function SwapInitial({
           </div>
 
           <div ref={inputOutRef} className={styles.inputContainer}>
-            {renderPrice()}
             <RichNumberInput
               id="swap-buy"
               labelText={lang('You buy')}
-              className={styles.amountInput}
+              className={styles.amountInputBuy}
               value={amountOut?.toString()}
               isLoading={isEstimating && inputSource === SwapInputSource.In}
               disabled={isReverseProhibited}
@@ -587,10 +616,13 @@ function SwapInitial({
 export default memo(
   withGlobal<OwnProps>(
     (global): StateProps => {
+      const account = selectCurrentAccount(global);
+
       return {
         accountId: global.currentAccountId,
         currentSwap: global.currentSwap,
         tokens: selectSwapTokens(global),
+        addressByChain: account?.addressByChain,
       };
     },
     (global, _, stickToFirst) => stickToFirst(global.currentAccountId),

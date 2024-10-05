@@ -14,8 +14,8 @@
 .passwordModalDialog {
   height: 35.5rem;
 
-  @supports (height: env(safe-area-inset-bottom)) {
-    height: calc(35.5rem + env(safe-area-inset-bottom));
+  @supports (height: var(--safe-area-bottom)) {
+    height: calc(35.5rem + var(--safe-area-bottom));
   }
 
   :global(.is-native-bottom-sheet) & {
@@ -36,9 +36,11 @@
     background-image: url("../../assets/vesting_bg_dark.png");
   }
 
-  :global(.is-android) & {
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
+  @include respond-below(xs) {
+    :global(.is-android) & {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
   }
 
   @media (min-resolution: 1.5dppx) {
@@ -82,7 +84,7 @@
   -webkit-text-fill-color: transparent;
 
   :global(.theme-dark) & {
-    background: linear-gradient(81.88deg, #44B5ED 19.42%, #2CD36F 71.55%);
+    background: linear-gradient(81.88deg, #58AFFF 19.42%, #2CD36F 71.55%);
     background-clip: text;
 
     -webkit-text-fill-color: transparent;
@@ -292,7 +294,7 @@
       background-size: 100%;
 
       :global(.theme-dark) & {
-        background-image: linear-gradient(81.88deg, #0C9EE8 19.42%, #2CD36F 71.55%);
+        background-image: linear-gradient(81.88deg, #469CEC 19.42%, #2CD36F 71.55%);
       }
     }
   }
@@ -324,7 +326,7 @@
     background-size: 100%;
 
     :global(.theme-dark) & {
-      background-image: linear-gradient(81.88deg, #0C9EE8 19.42%, #2CD36F 71.55%);
+      background-image: linear-gradient(81.88deg, #469CEC 19.42%, #2CD36F 71.55%);
     }
   }
 }

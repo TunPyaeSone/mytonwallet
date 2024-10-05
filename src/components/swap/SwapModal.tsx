@@ -4,22 +4,25 @@ import React, {
 import { getActions, withGlobal } from '../../global';
 
 import type { ApiActivity } from '../../api/types';
-import type { GlobalState, UserSwapToken } from '../../global/types';
+import type { Account, GlobalState, UserSwapToken } from '../../global/types';
 import { SwapState, SwapType } from '../../global/types';
 
 import { IS_CAPACITOR } from '../../config';
-import { selectCurrentAccountState, selectSwapTokens } from '../../global/selectors';
+import {
+  selectCurrentAccount,
+  selectCurrentAccountState,
+  selectSwapTokens,
+} from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import { formatCurrencyExtended } from '../../util/formatNumber';
 import resolveModalTransitionName from '../../util/resolveModalTransitionName';
-import getBlockchainNetworkIcon from '../../util/swap/getBlockchainNetworkIcon';
-import { ASSET_LOGO_PATHS } from '../ui/helpers/assetLogos';
 
 import { useDeviceScreen } from '../../hooks/useDeviceScreen';
 import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 import useModalTransitionKeys from '../../hooks/useModalTransitionKeys';
 
+import TokenIcon from '../common/TokenIcon';
 import TokenSelector from '../common/TokenSelector';
 import Modal from '../ui/Modal';
 import ModalHeader from '../ui/ModalHeader';
@@ -37,6 +40,7 @@ interface StateProps {
   currentSwap: GlobalState['currentSwap'];
   swapTokens?: UserSwapToken[];
   activityById?: Record<string, ApiActivity>;
+  addressByChain?: Account['addressByChain'];
 }
 
 function SwapModal({
@@ -52,11 +56,13 @@ function SwapModal({
     swapType,
     toAddress,
     payinAddress,
+    payoutAddress,
     payinExtraId,
     isSettingsModalOpen,
   },
   swapTokens,
   activityById,
+  addressByChain,
 }: StateProps) {
   const {
     startSwap,
@@ -170,8 +176,6 @@ function SwapModal({
   function renderSwapShortInfo() {
     if (!tokenIn || !tokenOut || !amountIn || !amountOut) return undefined;
 
-    const logoIn = tokenIn.image ?? ASSET_LOGO_PATHS[tokenIn.symbol.toLowerCase() as keyof typeof ASSET_LOGO_PATHS];
-    const logoOut = tokenOut.image ?? ASSET_LOGO_PATHS[tokenOut.symbol.toLowerCase() as keyof typeof ASSET_LOGO_PATHS];
     const swapInfoClassName = buildClassName(
       styles.swapShortInfo,
       !IS_CAPACITOR && styles.swapShortInfoInsidePasswordForm,
@@ -179,16 +183,8 @@ function SwapModal({
 
     return (
       <div className={swapInfoClassName}>
-        <div className={styles.tokenIconWrapper}>
-          <img src={logoIn} alt={tokenIn.symbol} className={styles.swapShortInfoTokenIcon} />
-          {tokenIn.blockchain && (
-            <img
-              src={getBlockchainNetworkIcon(tokenIn.blockchain)}
-              className={styles.swapShortInfoBlockchainIcon}
-              alt={tokenIn.blockchain}
-            />
-          )}
-        </div>
+        <TokenIcon token={tokenIn} withChainIcon size="small" className={styles.swapShortInfoTokenIcon} />
+
         <span className={styles.swapShortValue}>
           {lang('%amount_from% to %amount_to%', {
             amount_from: (
@@ -201,16 +197,7 @@ function SwapModal({
               </span>),
           })}
         </span>
-        <div className={styles.tokenIconWrapper}>
-          <img src={logoOut} alt={tokenOut.symbol} className={styles.swapShortInfoTokenIcon} />
-          {tokenOut.blockchain && (
-            <img
-              src={getBlockchainNetworkIcon(tokenOut.blockchain)}
-              className={styles.swapShortInfoBlockchainIcon}
-              alt={tokenOut.blockchain}
-            />
-          )}
-        </div>
+        <TokenIcon token={tokenOut} withChainIcon size="small" className={styles.swapShortInfoTokenIcon} />
       </div>
     );
   }
@@ -247,7 +234,9 @@ function SwapModal({
             amountIn={renderedTransactionAmountIn}
             amountOut={renderedTransactionAmountOut}
             payinAddress={payinAddress}
+            payoutAddress={payoutAddress}
             payinExtraId={payinExtraId}
+            addressByChain={addressByChain}
             activity={renderedActivity}
             onClose={handleModalCloseWithReset}
           />
@@ -323,11 +312,13 @@ function SwapModal({
 
 export default memo(withGlobal((global): StateProps => {
   const accountState = selectCurrentAccountState(global);
+  const account = selectCurrentAccount(global);
   const activityById = accountState?.activities?.byId;
 
   return {
     currentSwap: global.currentSwap,
     swapTokens: selectSwapTokens(global),
     activityById,
+    addressByChain: account?.addressByChain,
   };
 })(SwapModal));

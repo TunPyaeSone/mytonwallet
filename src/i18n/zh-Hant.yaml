@@ -26,8 +26,9 @@ Your have entered an insecure password, which can be easily guessed by scammers.
 Continue or change password to something more secure?: 繼續或將密碼更改為更安全的密碼？
 Change: 更改密碼
 "%1$d Secret Words": "%1$d 個註記詞"
+Secret Words: 密語
 $auth_import_mnemonic_description: |
-  您可以通過輸入您在創建錢包時記下的 %1$d 個註記詞來恢復對您錢包的權限.
+  您可以通過輸入創建錢包時記錄的**12或24個密語**來恢復對錢包的訪問。
 Let’s make sure your secrets words are recorded correctly.: 請確定您的註記詞已被正確記錄下來。
 $mnemonic_check_words_list: 請輸入以下單字
 $mnemonic_check_error: 您輸入的單字與列表中的單字不相符。 請再試一遍。
@@ -95,7 +96,7 @@ Warning!: 警告!
 Log Out: 登出
 $logout_without_backup_warning: 您尚未備份錢包。 如果您註銷，您將喪失您的代幣和 NFT。
 $logout_accounts_without_backup_warning: 您還沒有備份 %links%。 如果您註銷，您將喪失您的代幣和 NFT。
-$logout_warning: 這將斷開錢包與此應用程序的連接。 您將能夠使用 **%1$d 個密語** 恢復您的錢包 - 或者導入另一個錢包。
+$logout_warning: 這將從應用中移除當前錢包。請確保已備份您的**密語**。
 Your address was copied!: 您的地址已被複製!
 Show QR Code: 顯示 QR Code
 Create Deposit Link: 建立存款連結
@@ -117,7 +118,13 @@ Toggle Hide Tiny Transfers: 切換隱藏小額轉帳
 Network: 網路
 Developer Options: 開發者選項
 Confirmation: 確認
-Data to sign: 簽署資訊
+Signing Data: 簽名數據
+Contract Initialization Data: 合約初始化數據
+$dont_have_required_token: 您沒有所需的代幣，但可以交換。
+$unknown_token_address: 未知的代幣地址。
+$dont_have_required_nft: 您沒有所需的NFT來發送。
+$state_init_requires_bin: 合同初始化數據需要"bin"參數。
+$state_init_invalid: 無效的合同初始化數據。
 $signature_warning: |
   簽署自定義資訊是非常危險的。僅當您信任其來源時才使用它。
 Sign: 簽署
@@ -131,7 +138,6 @@ Sender: 發送人
 Recipient: 接收人
 Address was copied!: 地址已被複製!
 Repeat: 重複
-Receive: 接收
 Switch Account: 切換帳戶
 Copy wallet address: 複製錢包地址
 View address on %ton_explorer_name%: 在 %ton_explorer_name% 上查看此地址
@@ -143,7 +149,6 @@ NFT: NFT
 No NFTs yet: 尚未有 NFT
 $nft_explore_offer: |
   探索市場來尋找現有的 NFT 收藏.
-$nft_hardware_unsupported: 不幸的是，Ledger 錢包尚不支援傳輸 NFT。
 Open Getgems: 開啟 Getgems
 Transaction is not completed: 交易未完成
 Received: 已收到
@@ -154,6 +159,7 @@ Wallet is not backed up: 錢包未備份
 Testnet Version: 測試網版本
 Error reading clipboard: 讀取剪貼板時出現錯誤
 $fee_value: "手續費: %fee%"
+Pay fee with %stars_symbol%: "使用 %stars_symbol% 支付"
 Loading...: 讀取中...
 Recipient Address: 接收人地址
 Wallet address or domain: 錢包地址或是域名
@@ -190,8 +196,7 @@ Understood: 了解
 Today: 今天
 Yesterday: 昨天
 Now: 現在
-$receive_ton_description: 您可以分享您的地址、掃描二維碼或建立存款連結來接收加密貨幣。
-Your address: 您的地址
+$receive_ton_description: 掃描此二維碼或分享您的地址以充值錢包餘額。
 Wrong password, please try again.: 密碼錯誤，請再嘗試一次。
 Appearance: 外觀
 Light: 亮色模式
@@ -317,7 +322,6 @@ Message is encrypted.: 消息已加密。
 $dapp_ledger_warning1: 您即將使用您的**Ledger**錢包發送多方交易。您需要手動**一一**簽署每筆底層交易。
 $dapp_ledger_warning2: 請慢慢來，不要中斷過程。
 Agree: 同意
-Unfortunately, this operation is not yet supported by Ledger wallet.: 不幸的是，該操作尚未由Ledger Wallet支持。
 SwapTitle: 交換
 Swap: 交換
 You sell: 您賣出
@@ -343,7 +347,7 @@ $swap_slippage_tooltip2: 如果在處理您的交換時，價格變化超過此�
 Coins have been swapped!: 币已交换完成！
 Slippage not specified: 未指定下單誤差
 Slippage too high: 下單誤差過高
-Not enough TON: TON 不足
+Not Enough %symbol%: "%symbol% 不足"
 Use Responsibly: 負責任地使用
 $auth_responsibly_description1: |
   MyTonWallet 是一個**自我託管**錢包，這意味著**只有您**擁有完全控制權，最重要的是，對您的資金**承擔全部責任**。
@@ -413,7 +417,7 @@ Biometric Authentication: 生物辨識認證
 If you turn off biometric protection, you will need to create a password.: 如果您關閉生物辨識保護，則需要建立密碼。
 Enter your current password: 輸入目前密碼
 Turn On Biometrics: 打開生物識別
-Please confirm transaction using biometrics.: 請使用生物辨識技術確認交易。
+Please confirm transaction using biometrics: 請使用生物辨識技術確認交易
 Enabling biometric confirmation will reset the password.: 啟用生物辨識確認將重設密碼。
 Biometric Registration: 生物辨識註冊
 Step 1 of 2. Registration: 第 1 步（共 2 步）：註冊
@@ -432,7 +436,7 @@ Use Password: 使用密碼
 Biometrics Disabled: 生物辨識已停用
 Biometrics Enabled: 啟用生物識別
 A request is already pending: 請求已待處理
-Please confirm operation using biometrics.: 請使用生物辨識確認操作。
+Please confirm operation using biometrics: 請使用生物辨識確認操作
 Scan QR Code: 掃描二維碼
 Permission denied. Please grant camera permission to use the QR code scanner.: 沒有權限。 請授予相機使用 QR 掃描器的權限。
 Unsupported QR code format: 不支持的QR碼格式
@@ -445,7 +449,7 @@ Euro: 歐元
 Ruble: 盧布
 Yuan: 元
 $max_balance: "最大: %balance%"
-$unstake_information_instantly: 您將立即收到您的存款。
+$unstake_information_instantly: 您將立即收到您的存款
 Select Token: 選擇代幣
 MY: 我的
 POPULAR: 受歡迎
@@ -477,13 +481,13 @@ Wrong code, please try again: 程式碼錯誤，請重試
 Scan your fingerprint: 掃描您的指紋
 Incorrect code, please try again.: 不正確的代碼，請重試。
 Correct: 不錯
-Confirm Operation: 確認操作
+Confirm Action: 確認操作
 Confirm Swap: 確認兌換
 "%amount% to %address%": "%amount% 至 %address%"
 "%amount_from% to %amount_to%": "%amount_from% 至 %amount_to%"
 Failed to enable biometrics.: 無法啟用生物識別。
-Please try to confirm your biometrics again.: 請嘗試再次確認您的生物辨識訊息。
-Unknown error.: 未知錯誤。
+Please try to confirm your biometrics again: 請嘗試再次確認您的生物辨識訊息
+Unknown error: 未知錯誤
 Are you sure you want to disable Face ID?: 您確定要禁用Face ID嗎？
 Are you sure you want to disable Touch ID?: 您確定要禁用Touch ID嗎？
 Are you sure you want to disable biometrics?: 您確定要禁用生物識別技術嗎？
@@ -493,7 +497,6 @@ No Activity: 無活動
 Add / Buy: 添加 / 購買
 Buy with Card: 用卡購買
 Buy with Crypto: 用加密貨幣購買
-Receive with QR or Invoice: 透過 QR 碼或發票接收
 Cannot load widget: 無法加載小部件
 Explore: 探索
 No partners yet: 還沒有伴侶
@@ -513,12 +516,7 @@ $wallet_switch_version_2: 切換到另一個錢包版本
 or import from: 或從中導入
 $insufficient_fee: "手续费不足: %fee%"
 Required: 必需的
-Transaction to this smart contract is not yet supported by Ledger.: Ledger 尚不支援對此智能合約的交易。
-This type of transaction is not yet supported by Ledger.: Ledger 尚不支援此類交易。
-The current version of Ledger only supports English-language comments without special characters.: 目前版本的 Ledger 僅支援不含特殊字元的英文註釋。
 Comment is too long.: 評論太長了。
-Transferring NFT is not yet supported by Ledger.: Ledger 尚不支援傳輸 NFT。
-Encrypted comments are not yet supported by Ledger.: Ledger 尚不支援加密評論。
 Memo: Memo
 Memo was copied!: Memo 被複製了！
 $hide_tokens_no_cost_help: |
@@ -530,6 +528,19 @@ To use this feature, first enable biometrics in your phone settings.: 若要使�
 Open Settings: 開啟設定
 You are about to transfer an important service token, which is needed to withdraw your deposit from staking.: 您即將轉移一個重要的服務代幣，這是從質押中提取押金所必需的。
 No Price: 無價格
+$ledger_not_supported_operation: 此操作不支持您當前版本的 Ledger TON 應用程序。請使用 Ledger Live 進行更新。
+$ledger_unsupported_ton_connect: TonConnect不受您的Ledger Ton應用程序的支持。請使用Ledger Live更新它。
+$dapp_transfer_tokens_burn: 燃燒%amount%
+$dapp_dns_set_wallet_payload: 將網域 %domain% 的連結錢包更改為 %address%
+$dapp_dns_delete_wallet_payload: 正在刪除網域 %domain% 的連結錢包
+$dapp_dns_change_record_payload: 將網域 %domain% 的「%category%」記錄變更為 %value%
+$dapp_dns_delete_record_payload: 正在刪除網域 %domain% 的「%category%」記錄
+$dapp_token_bridge_pay_swap_payload: 透過跨鏈橋確認兌換
+$dapp_liquid_staking_deposit_payload: 存款到流動質押
+$dapp_liquid_staking_vote_payload: 對提案 %votingAddress% 投票“%vote%”
+$dapp_single_nominator_change_validator_payload: 將 SingleNominator 質押合約驗證器的位址改為 %address%
+$dapp_single_nominator_withdraw_payload: 從 SingleNominator 質押合約中提取 %amount% TON
+$dapp_vesting_add_whitelist_payload: 將%address%加入歸屬錢包白名單
 Search or enter address...: 搜尋或輸入地址...
 Connecting dapps is not yet supported by Ledger.: Ledger 尚不支援連接 dapp。
 Time synchronization issue. Please ensure your device's time settings are correct.: 時間同步問題。 請確保您設備的時間設定正確。
@@ -588,22 +599,62 @@ until %date%: 截至 %date%
 Unfreeze: 解凍
 Claim: 索賠
 Confirm Unfreezing: 確認解凍
-Insufficient Balance for Fee.: 費用餘額不足。
+Insufficient Balance for Fee: 費用餘額不足
 $fee_value_bold: "**手續費:** %fee%"
+Security: 安全
+To avoid entering the passcode every time, you can use biometrics.: 為避免每次輸入密碼，您可以使用生物識別技術。
+Change Passcode: 更改密碼
+Change Password: 更改密碼
+Confirm Password: 確認密碼
+The passcode will be changed for all your wallets.: 密碼將為您的所有錢包更改。
+Password Changed!: 密碼已更改！
+Passcode Changed!: 密碼已更改！
+New code set successfully: 新代碼設定成功
+Codes don’t match: 代碼不匹配
+Enter your new code: 輸入您的新代碼
+Re-enter your new code: 再次輸入您的新代碼
 MyTonWallet Features: MyTonWallet 功能
 Install on Desktop: 安裝在桌面
 Install on Mobile: 安裝在手機
 Install App: 安裝應用程式
 WrongNetwork: Dapp 要求來自另一個網路的交易。
 Hide: 隱藏
+Hidden NFTs: 隱藏的NFT
+Hidden By Me: 我隱藏的
+Probably Scam: 可能是騙局
+$settings_nft_probably_scam_description: 這些NFT被反詐騙保護自動禁用。如果您認為它們被錯誤地包含在此列表中，您可以將必要的返回主頁。
+Unhide: 顯示
+Hide All: 隱藏全部
 Hide NFT: 隱藏 NFT
-Are you sure you want to hide this NFT? This action cannot be undone.: 您確定要隱藏這個 NFT 嗎？此操作無法撤消。
 Reload Page: 重新加載頁面
 Open in Safari: 在 Safari 中打開
 Open in Browser: 在瀏覽器中打開
 CopyURL: 複製鏈接
 Share: 分享
+Unhide NFT: 顯示 NFT
+$unhide_nft_warning: 你確定要顯示 %name% 嗎？這個 NFT 看起來很可疑，可能與其名稱和描述不符。
+Hide NFTs: 隱藏 NFT
+Are you sure you want to hide this NFT collection containing %number% NFTs?: 你確定要隱藏這個包含 %number% 個 NFT 的收藏嗎？
+Are you sure you want to hide these %number% NFTs?: 您確定要隱藏這 %number% 個NFT嗎？
+Show: 顯示
 Confirm Sending: 確認發送
 Confirm Burning: 確認刻錄
 Confirm Passcode: 確認密碼
 Enter your code: 輸入您的代碼
+$hardware_payload_warning: 第三方服務正在請求訪問您的錢包 — 這可能會導致資金損失。如果您不確定此服務的可靠性，請取消操作。
+$hardware_blind_sign_not_enabled: |
+  第三方服務正在請求訪問您的錢包 — 這可能會導致資金損失。如果您不確定此服務的可靠性，請取消操作。
+
+  要繼續，請在 Ledger 的 TON 應用程序設置中啟用“盲簽名”選項。
+Switch to W5: 切換到 W5
+Not Scam: 不是騙局
+Untitled: 未命名
+$swap_too_small_amount: 金額太小
+Not enough %symbol%: "%symbol% 不足"
+$receive_tron_description: 掃描此二維碼或分享您的地址以充值錢包餘額。
+You have just created a new multichain wallet: 您剛剛創建了一個新的多鏈錢包
+Now you can transfer tokens from your TON and TRON wallets.: 現在您可以從您的 TON 和 TRON 錢包中轉移代幣。
+Enter Secret Words: 輸入密語
+Turn this off so you can manually download updates and verify signatures.: 關閉此功能以手動下載更新並驗證簽名。
+InvalidMnemonic: 您的助記詞無效
+NFT Menu: NFT選單

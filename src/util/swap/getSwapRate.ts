@@ -1,6 +1,6 @@
 import type { ApiSwapAsset } from '../../api/types';
 
-import { TON_SYMBOL } from '../../config';
+import { TONCOIN } from '../../config';
 import { Big } from '../../lib/big.js';
 import { formatInteger } from '../formatNumber';
 
@@ -14,7 +14,7 @@ function getCurrencyPriority(symbol: string) {
   if (FIAT.has(symbol)) return 5;
   if (USD.has(symbol)) return 4;
   if (BTC.has(symbol)) return 3;
-  if (symbol === TON_SYMBOL) return 2;
+  if (symbol === TONCOIN.symbol) return 2;
 
   return 1;
 }
@@ -48,11 +48,11 @@ export default function getSwapRate(
     secondCurrencySymbol = fromToken.symbol;
     const ratio = fromAmountBig.div(toAmount);
     const isLargeNumber = shouldTrimLargeNumber && ratio.gte(LARGE_NUMBER);
-    price = formatInteger(ratio.toNumber(), isLargeNumber ? 0 : 2);
+    price = formatInteger(ratio.toNumber(), isLargeNumber ? 0 : 4);
   } else {
     const ratio = toAmountBig.div(fromAmount);
     const isLargeNumber = shouldTrimLargeNumber && ratio.gte(LARGE_NUMBER);
-    price = formatInteger(ratio.toNumber(), isLargeNumber ? 0 : 2);
+    price = formatInteger(ratio.toNumber(), isLargeNumber ? 0 : 4);
   }
 
   return {

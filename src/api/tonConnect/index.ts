@@ -1,4 +1,3 @@
-// eslint-disable-next-line max-classes-per-file
 import { Address, Cell } from '@ton/core';
 import type {
   ConnectEventError,
@@ -29,30 +28,28 @@ import type {
 import { ApiCommonError, ApiTransactionError } from '../types';
 import { CONNECT_EVENT_ERROR_CODES, SEND_TRANSACTION_ERROR_CODES, SIGN_DATA_ERROR_CODES } from './types';
 
-import { IS_EXTENSION, LEDGER_NFT_TRANSFER_DISABLED, TONCOIN_SLUG } from '../../config';
+import { IS_EXTENSION, TONCOIN } from '../../config';
 import { parseAccountId } from '../../util/account';
-import { isLedgerCommentLengthValid } from '../../util/ledger/utils';
-import { logDebug, logDebugError } from '../../util/logs';
+import { areDeepEqual } from '../../util/areDeepEqual';
+import { logDebugError } from '../../util/logs';
 import { fetchJsonMetadata } from '../../util/metadata';
 import safeExec from '../../util/safeExec';
-import { isAscii } from '../../util/stringFormat';
-import blockchains from '../blockchains';
-import { parsePayloadBase64 } from '../blockchains/ton';
-import { fetchKeyPair } from '../blockchains/ton/auth';
-import { LEDGER_SUPPORTED_PAYLOADS } from '../blockchains/ton/constants';
-import { getIsRawAddress, toBase64Address, toRawAddress } from '../blockchains/ton/util/tonCore';
-import { getContractInfo } from '../blockchains/ton/wallet';
+import chains from '../chains';
+import { getContractInfo, parsePayloadBase64 } from '../chains/ton';
+import { fetchKeyPair } from '../chains/ton/auth';
+import {
+  getIsRawAddress, getWalletPublicKey, toBase64Address, toRawAddress,
+} from '../chains/ton/util/tonCore';
 import {
   fetchStoredAccount,
-  fetchStoredAddress,
-  fetchStoredPublicKey,
+  fetchStoredTonWallet,
   getCurrentAccountId,
   getCurrentAccountIdOrFail,
 } from '../common/accounts';
 import { getKnownAddressInfo } from '../common/addresses';
 import { createDappPromise } from '../common/dappPromises';
 import { isUpdaterAlive } from '../common/helpers';
-import { bytesToBase64, sha256 } from '../common/utils';
+import { bytesToBase64, hexToBytes, sha256 } from '../common/utils';
 import * as apiErrors from '../errors';
 import { ApiServerError } from '../errors';
 import { callHook } from '../hooks';
@@ -69,10 +66,12 @@ import {
 } from '../methods/dapps';
 import { createLocalTransaction } from '../methods/transactions';
 import * as errors from './errors';
-import { BadRequestError, UnknownAppError } from './errors';
+import { UnknownAppError } from './errors';
 import { isValidString, isValidUrl } from './utils';
 
-const ton = blockchains.ton;
+const BLANK_GIF_DATA_URL = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+
+const ton = chains.ton;
 
 let resolveInit: AnyFunction;
 const initPromise = new Promise((resolve) => {
@@ -135,6 +134,7 @@ export async function connect(
 
     onPopupUpdate({
       type: 'dappConnect',
+      identifier: 'identifier' in request ? request.identifier : undefined,
       promiseId,
       accountId,
       dapp,
@@ -154,11 +154,11 @@ export async function connect(
     accountId = promiseResult!.accountId!;
     request.accountId = accountId;
     await addDapp(accountId, dapp);
+    const { address } = await fetchStoredTonWallet(accountId);
 
     const result = await reconnect(request, id);
 
     if (result.event === 'connect' && proof) {
-      const address = await fetchStoredAddress(accountId);
       const { password, signature } = promiseResult!;
 
       let proofReplyItem: TonProofItemReplySuccess;
@@ -197,9 +197,10 @@ export async function reconnect(request: ApiDappRequest, id: number): Promise<Lo
     if (!currentDapp) {
       throw new UnknownAppError();
     }
-    await updateDapp(accountId, origin, (dapp) => ({ ...dapp, connectedAt: Date.now() }));
 
-    const address = await fetchStoredAddress(accountId);
+    await updateDapp(accountId, origin, { connectedAt: Date.now() });
+
+    const { address } = await fetchStoredTonWallet(accountId);
     const items: ConnectItemReply[] = [
       await buildTonAddressReplyItem(accountId, address),
     ];
@@ -240,14 +241,15 @@ export async function sendTransaction(
 ): Promise<SendTransactionRpcResponse> {
   try {
     const { origin, accountId } = await validateRequest(request);
+    const { network } = parseAccountId(accountId);
 
     const txPayload = JSON.parse(message.params[0]) as TransactionPayload;
+    const { messages, network: dappNetworkRaw } = txPayload;
 
-    if (txPayload.messages.length > 4) {
+    if (messages.length > 4) {
       throw new errors.BadRequestError('Payload contains more than 4 messages, which exceeds limit');
     }
 
-    const { messages, network: dappNetworkRaw } = txPayload;
     const dappNetwork = dappNetworkRaw
       ? (dappNetworkRaw === CHAIN.MAINNET ? 'mainnet' : 'testnet')
       : undefined;
@@ -257,16 +259,28 @@ export async function sendTransaction(
       validUntil = Math.round(validUntil / 1000);
     }
 
-    const { network } = parseAccountId(accountId);
-    const account = await fetchStoredAccount(accountId);
-    const isLedger = !!account.ledger;
+    const {
+      type, ton: {
+        address,
+        publicKey: publicKeyHex,
+      },
+    } = await fetchStoredAccount(accountId);
+
+    const isLedger = type === 'ledger';
+
+    let vestingAddress: string | undefined;
+
+    if (txPayload.from && toBase64Address(txPayload.from) !== toBase64Address(address)) {
+      const publicKey = hexToBytes(publicKeyHex);
+      if (isLedger && await checkIsHisVestingWallet(network, publicKey, txPayload.from)) {
+        vestingAddress = txPayload.from;
+      } else {
+        throw new errors.BadRequestError(undefined, ApiTransactionError.WrongAddress);
+      }
+    }
 
     if (dappNetwork && network !== dappNetwork) {
       throw new errors.BadRequestError(undefined, ApiTransactionError.WrongNetwork);
-    }
-
-    if (txPayload.from && toBase64Address(txPayload.from, false) !== toBase64Address(account.address, false)) {
-      throw new errors.BadRequestError(undefined, ApiTransactionError.WrongAddress);
     }
 
     await openExtensionPopup(true);
@@ -284,7 +298,7 @@ export async function sendTransaction(
     } = await checkTransactionMessages(accountId, messages, network);
 
     const dapp = (await getDappsByOrigin(accountId))[origin];
-    const transactionsForRequest = await prepareTransactionForRequest(network, messages, isLedger);
+    const transactionsForRequest = await prepareTransactionForRequest(network, messages);
 
     const { promiseId, promise } = createDappPromise();
 
@@ -295,6 +309,7 @@ export async function sendTransaction(
       dapp,
       transactions: transactionsForRequest,
       fee: checkResult.fee!,
+      vestingAddress,
     });
 
     // eslint-disable-next-line prefer-const
@@ -328,7 +343,9 @@ export async function sendTransaction(
       }
     } else {
       const password = response as string;
-      const submitResult = await ton.submitMultiTransfer(accountId, password!, preparedMessages, validUntil);
+      const submitResult = await ton.submitMultiTransfer({
+        accountId, password, messages: preparedMessages, expireAt: validUntil,
+      });
       if ('error' in submitResult) {
         error = submitResult.error;
       } else {
@@ -342,19 +359,18 @@ export async function sendTransaction(
       throw new errors.UnknownError(error);
     }
 
-    const fromAddress = await fetchStoredAddress(accountId);
     const successTransactions = transactionsForRequest.slice(0, successNumber!);
 
     successTransactions.forEach(({ amount, normalizedAddress, payload }, index) => {
       const comment = payload?.type === 'comment' ? payload.comment : undefined;
       const msgHash = isLedger ? msgHashes[index] : msgHashes[0];
-      createLocalTransaction(accountId, {
+      createLocalTransaction(accountId, 'ton', {
         amount,
-        fromAddress,
+        fromAddress: address,
         toAddress: normalizedAddress,
         comment,
         fee: checkResult.fee!,
-        slug: TONCOIN_SLUG,
+        slug: TONCOIN.slug,
         inMsgHash: msgHash,
       });
     });
@@ -405,6 +421,15 @@ export async function sendTransaction(
   }
 }
 
+async function checkIsHisVestingWallet(network: ApiNetwork, ownerPublicKey: Uint8Array, address: string) {
+  const [info, publicKey] = await Promise.all([
+    getContractInfo(network, address),
+    getWalletPublicKey(network, address),
+  ]);
+
+  return info.contractInfo?.name === 'vesting' && areDeepEqual(ownerPublicKey, publicKey);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function signData(request: ApiDappRequest, message: SignDataRpcRequest) {
   return {
@@ -448,7 +473,7 @@ async function checkTransactionMessages(accountId: string, messages: Transaction
   };
 }
 
-function prepareTransactionForRequest(network: ApiNetwork, messages: TransactionPayloadMessage[], isLedger: boolean) {
+function prepareTransactionForRequest(network: ApiNetwork, messages: TransactionPayloadMessage[]) {
   return Promise.all(messages.map(
     async ({
       address,
@@ -459,38 +484,8 @@ function prepareTransactionForRequest(network: ApiNetwork, messages: Transaction
       const toAddress = getIsRawAddress(address) ? toBase64Address(address, true, network) : address;
       // Fix address format for `waitTxComplete` to work properly
       const normalizedAddress = toBase64Address(address, undefined, network);
+      const payload = rawPayload ? await parsePayloadBase64(network, toAddress, rawPayload) : undefined;
       const { isScam } = getKnownAddressInfo(normalizedAddress) || {};
-
-      const payload = rawPayload
-        ? await parsePayloadBase64(network, toAddress, rawPayload)
-        : undefined;
-
-      if (isLedger) {
-        const isNft = payload?.type === 'nft:transfer';
-        if (isNft) {
-          if (payload.forwardPayload || LEDGER_NFT_TRANSFER_DISABLED) {
-            throw new BadRequestError('Unsupported payload', ApiTransactionError.UnsupportedHardwareNftOperation);
-          }
-        } else {
-          const { isLedgerAllowed, codeHash } = await getContractInfo(network, toAddress);
-          if (!isLedgerAllowed) {
-            logDebug('Unsupported contract', toAddress, codeHash);
-            throw new BadRequestError('Unsupported contract', ApiTransactionError.UnsupportedHardwareContract);
-          }
-
-          if (payload) {
-            if (!LEDGER_SUPPORTED_PAYLOADS.includes(payload.type)) {
-              throw new BadRequestError('Unsupported payload', ApiTransactionError.UnsupportedHardwarePayload);
-            }
-            if (payload.type === 'comment' && !isAscii(payload.comment)) {
-              throw new BadRequestError('Unsupported payload', ApiTransactionError.NonAsciiCommentForHardwareOperation);
-            }
-            if (payload.type === 'comment' && !isLedgerCommentLengthValid(payload.comment)) {
-              throw new BadRequestError('Unsupported payload', ApiTransactionError.TooLongCommentForHardwareOperation);
-            }
-          }
-        }
-      }
 
       return {
         toAddress,
@@ -540,10 +535,11 @@ function formatConnectError(id: number, error: Error): ConnectEventError {
 async function buildTonAddressReplyItem(accountId: string, address: string): Promise<ConnectItemReply> {
   const { network } = parseAccountId(accountId);
 
-  const [stateInit, publicKey] = await Promise.all([
+  const [stateInit, { publicKey }] = await Promise.all([
     ton.getWalletStateInit(accountId),
-    fetchStoredPublicKey(accountId),
+    fetchStoredTonWallet(accountId),
   ]);
+
   return {
     name: 'ton_addr',
     address: toRawAddress(address),
@@ -627,7 +623,8 @@ export async function fetchDappMetadata(manifestUrl: string, origin?: string): P
     const data = await fetchJsonMetadata(manifestUrl);
 
     const { url, name, iconUrl } = await data;
-    if (!isValidUrl(url) || !isValidString(name) || !isValidUrl(iconUrl)) {
+    const safeIconUrl = iconUrl.startsWith('data:') ? BLANK_GIF_DATA_URL : iconUrl;
+    if (!isValidUrl(url) || !isValidString(name) || !isValidUrl(safeIconUrl)) {
       throw new Error('Invalid data');
     }
 
@@ -635,7 +632,7 @@ export async function fetchDappMetadata(manifestUrl: string, origin?: string): P
       origin: origin ?? new URL(url).origin,
       url,
       name,
-      iconUrl,
+      iconUrl: safeIconUrl,
       manifestUrl,
     };
   } catch (err) {

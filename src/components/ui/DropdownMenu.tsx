@@ -24,6 +24,9 @@ interface OwnProps {
   className?: string;
   bubbleClassName?: string;
   buttonClassName?: string;
+  iconClassName?: string;
+  fontIconClassName?: string;
+  shouldCleanup?: boolean;
   onSelect?: (value: string) => void;
   onClose: NoneToVoidFunction;
 }
@@ -42,6 +45,9 @@ function DropdownMenu({
   className,
   bubbleClassName,
   buttonClassName,
+  iconClassName,
+  fontIconClassName,
+  shouldCleanup,
   onSelect,
   onClose,
 }: OwnProps) {
@@ -65,17 +71,19 @@ function DropdownMenu({
       transformOriginY={transformOriginY}
       className={className}
       bubbleClassName={bubbleClassName}
+      shouldCleanup={shouldCleanup}
       onClose={onClose}
     >
-      {items.map((item) => {
+      {items.map((item, index) => {
         const fullButtonClassName = buildClassName(
           styles.item,
           item.icon && styles.item_with_icon,
           item.isDisabled && styles.disabled,
           item.isDangerous && styles.dangerous,
-          item.withSeparator && styles.separator,
+          item.withSeparator && index > 0 && styles.separator,
           selectedValue === item.value && styles.item_selected,
           buttonClassName,
+          'capture-scroll',
         );
         return (
           <button
@@ -85,9 +93,17 @@ function DropdownMenu({
             disabled={item.isDisabled}
             onClick={(e) => handleItemClick(e, item.value)}
           >
-            {item.icon && <img src={item.icon} alt="" className={buildClassName('icon', styles.itemIcon)} />}
+            {item.icon && (
+              <img src={item.icon} alt="" className={buildClassName('icon', styles.itemIcon, iconClassName)} />
+            )}
+            {item.overlayIcon && (
+              <img src={item.overlayIcon} alt="" className={buildClassName('icon', styles.itemOverlayIcon)} />
+            )}
             {item.fontIcon && (
-              <i className={buildClassName(`icon icon-${item.fontIcon}`, styles.fontIcon)} aria-hidden />
+              <i
+                className={buildClassName(`icon icon-${item.fontIcon}`, styles.fontIcon, fontIconClassName)}
+                aria-hidden
+              />
             )}
             <span className={buildClassName(styles.itemName, 'menuItemName')}>
               {shouldTranslateOptions ? lang(item.name) : item.name}

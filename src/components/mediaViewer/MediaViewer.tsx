@@ -1,4 +1,5 @@
 import React, {
+  beginHeavyAnimation,
   memo, useEffect, useLayoutEffect, useMemo,
 } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
@@ -13,7 +14,6 @@ import captureEscKeyListener from '../../util/captureEscKeyListener';
 import { MEMO_EMPTY_ARRAY } from '../../util/memo';
 import { animateClosing, animateOpening, ANIMATION_DURATION } from './helpers/ghostAnimation';
 
-import { dispatchHeavyAnimationEvent } from '../../hooks/useHeavyAnimationCheck';
 import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 import usePrevious from '../../hooks/usePrevious';
@@ -28,6 +28,9 @@ import styles from './MediaViewer.module.scss';
 
 interface StateProps {
   mediaId?: string;
+  txId?: string;
+  hiddenNfts?: 'user' | 'scam';
+  noGhostAnimation?: boolean;
   mediaIds: string[];
   mediaUrl?: string;
   mediaType: MediaType;
@@ -37,16 +40,19 @@ interface StateProps {
 }
 
 function MediaViewer({
-  mediaId, mediaIds, mediaType, mediaUrl, withAnimation, mediaByIds, blacklistedIds,
+  mediaId, mediaIds, mediaType, mediaUrl, withAnimation, mediaByIds, blacklistedIds, txId, hiddenNfts, noGhostAnimation,
 }: StateProps) {
   const { closeMediaViewer, openMediaViewer } = getActions();
 
   const isOpen = Boolean(mediaId);
   const lang = useLang();
   const prevMediaId = usePrevious(mediaId);
+  const prevTxId = usePrevious(txId);
+  const prevHiddenNfts = usePrevious(hiddenNfts);
+  const prevNoGhostAnimation = usePrevious(noGhostAnimation);
   const headerAnimation = withAnimation ? 'slideFade' : 'none';
-  const shouldAnimateOpening = withAnimation && isOpen && !prevMediaId;
-  const shouldAnimateClosing = withAnimation && !isOpen && !!prevMediaId;
+  const shouldAnimateOpening = withAnimation && isOpen && !prevMediaId && !noGhostAnimation;
+  const shouldAnimateClosing = withAnimation && !isOpen && !!prevMediaId && !prevNoGhostAnimation;
 
   const handleClose = useLastCallback(() => closeMediaViewer());
 
@@ -79,14 +85,25 @@ function MediaViewer({
 
   useEffect(() => {
     if (shouldAnimateOpening) {
-      dispatchHeavyAnimationEvent(ANIMATION_DURATION + ANIMATION_END_DELAY);
-      animateOpening(mediaType, mediaId, mediaUrl);
+      beginHeavyAnimation(ANIMATION_DURATION + ANIMATION_END_DELAY);
+      animateOpening(mediaType, mediaId, mediaUrl, txId, hiddenNfts);
     }
     if (shouldAnimateClosing) {
-      dispatchHeavyAnimationEvent(ANIMATION_DURATION + ANIMATION_END_DELAY);
-      animateClosing(mediaType, prevMediaId);
+      beginHeavyAnimation(ANIMATION_DURATION + ANIMATION_END_DELAY);
+      animateClosing(mediaType, prevMediaId, prevTxId, prevHiddenNfts);
     }
-  }, [shouldAnimateOpening, shouldAnimateClosing, mediaId, mediaType, mediaUrl, prevMediaId]);
+  }, [
+    shouldAnimateOpening,
+    shouldAnimateClosing,
+    mediaId,
+    mediaType,
+    mediaUrl,
+    prevMediaId,
+    txId,
+    prevTxId,
+    hiddenNfts,
+    prevHiddenNfts,
+  ]);
 
   return (
     <ShowTransition
@@ -114,7 +131,9 @@ function MediaViewer({
 }
 
 export default memo(withGlobal((global): StateProps => {
-  const { mediaId, mediaType = MediaType.Nft } = global.mediaViewer || {};
+  const {
+    mediaId, mediaType = MediaType.Nft, txId, hiddenNfts, noGhostAnimation,
+  } = global.mediaViewer || {};
   const animationLevel = global.settings?.animationLevel;
   const accountState = selectCurrentAccountState(global);
 
@@ -137,6 +156,9 @@ export default memo(withGlobal((global): StateProps => {
 
   return {
     mediaId,
+    txId,
+    hiddenNfts,
+    noGhostAnimation,
     mediaIds,
     mediaType,
     mediaUrl,

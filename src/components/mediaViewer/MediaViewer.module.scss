@@ -43,12 +43,12 @@
   grid-area: 1 / 1 / 2 / -2;
 
   min-width: 0;
-  padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-left));
+  padding: max(0.75rem, var(--safe-area-top)) max(0.75rem, env(safe-area-inset-left));
 
   background: linear-gradient(to bottom, rgba(12, 12, 12, 1) 0%, rgba(12, 12, 12, 0) 100%);
 
   @include respond-below(xs) {
-    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-left));
+    padding: max(1rem, var(--safe-area-top)) max(1rem, env(safe-area-inset-left));
   }
 }
 
@@ -223,16 +223,17 @@
   align-items: center;
 
   height: 100%;
-  padding: 6rem 0 2rem;
+  padding: 4rem 0 2rem;
+
+  &::before {
+    content: "";
+
+    display: block;
+    flex: 1;
+  }
 
   @include respond-below(xs) {
     padding: 3rem 0 0.5rem;
-    &::before {
-      content: "";
-
-      display: block;
-      flex: 1;
-    }
   }
 }
 
@@ -256,14 +257,14 @@
   --max-height: 4.25rem;
   --background-color: #202020;
 
+  overflow: auto;
+  flex: 1;
+
   max-width: min(50rem, calc(100% - 4rem));
   margin-top: 2rem;
 
   @include respond-below(xs) {
     --background-color: #000;
-
-    overflow: auto;
-    flex: 1;
 
     max-width: 100%;
     margin-top: 0.5rem;
@@ -479,4 +480,9 @@
   height: 100%;
 
   object-fit: cover;
+}
+
+.scamImage {
+  width: 2.375rem;
+  margin-right: 0.25rem;
 }

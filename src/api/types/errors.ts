@@ -2,20 +2,21 @@ export enum ApiCommonError {
   Unexpected = 'Unexpected',
   ServerError = 'ServerError',
   DebugError = 'DebugError',
+  UnsupportedVersion = 'UnsupportedVersion',
+}
+
+export enum ApiAuthError {
+  InvalidMnemonic = 'InvalidMnemonic',
 }
 
 export enum ApiTransactionDraftError {
   InvalidAmount = 'InvalidAmount',
   InvalidToAddress = 'InvalidToAddress',
   InsufficientBalance = 'InsufficientBalance',
+  InvalidStateInit = 'InvalidStateInit',
+  StateInitWithoutBin = 'StateInitWithoutBin',
   DomainNotResolved = 'DomainNotResolved',
   WalletNotInitialized = 'WalletNotInitialized',
-  UnsupportedHardwareOperation = 'UnsupportedHardwareOperation',
-  UnsupportedHardwareContract = 'UnsupportedHardwareContract',
-  EncryptedDataNotSupported = 'EncryptedDataNotSupported',
-  NonAsciiCommentForHardwareOperation = 'NonAsciiCommentForHardwareOperation',
-  TooLongCommentForHardwareOperation = 'TooLongCommentForHardwareOperation',
-  UnsupportedHardwareNftOperation = 'UnsupportedHardwareNftOperation',
   InvalidAddressFormat = 'InvalidAddressFormat',
   InactiveContract = 'InactiveContract',
 }
@@ -25,13 +26,10 @@ export enum ApiTransactionError {
   IncorrectDeviceTime = 'IncorrectDeviceTime',
   InsufficientBalance = 'InsufficientBalance',
   UnsuccesfulTransfer = 'UnsuccesfulTransfer',
-  UnsupportedHardwareContract = 'UnsupportedHardwareContract',
-  UnsupportedHardwarePayload = 'UnsupportedHardwarePayload',
-  NonAsciiCommentForHardwareOperation = 'NonAsciiCommentForHardwareOperation',
-  TooLongCommentForHardwareOperation = 'TooLongCommentForHardwareOperation',
-  UnsupportedHardwareNftOperation = 'UnsupportedHardwareNftOperation',
+  NotSupportedHardwareOperation = 'NotSupportedHardwareOperation',
+  HardwareBlindSigningNotEnabled = 'HardwareBlindSigningNotEnabled',
   WrongAddress = 'WrongAddress',
   WrongNetwork = 'WrongNetwork',
 }
 
-export type ApiAnyDisplayError = ApiCommonError | ApiTransactionDraftError | ApiTransactionError;
+export type ApiAnyDisplayError = ApiCommonError | ApiAuthError | ApiTransactionDraftError | ApiTransactionError;

@@ -5,8 +5,8 @@
 
   height: 40rem;
 
-  @supports (height: env(safe-area-inset-bottom)) {
-    height: calc(40rem + env(safe-area-inset-bottom));
+  @supports (height: var(--safe-area-bottom)) {
+    height: calc(40rem + var(--safe-area-bottom));
   }
 }
 
@@ -22,13 +22,17 @@
 
   @include adapt-padding-to-scrollbar(1rem);
 
-  @supports (padding-bottom: env(safe-area-inset-bottom)) {
-    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+  @supports (padding-bottom: var(--safe-area-bottom)) {
+    padding-bottom: max(var(--safe-area-bottom), 1rem);
   }
 }
 
 .amountInput {
   margin-bottom: 0.8125rem;
+}
+
+.amountInputBuy {
+  margin-bottom: 0;
 }
 
 .inputLabel {
@@ -40,7 +44,6 @@
 }
 
 .balanceContainer,
-.priceContainer,
 .advancedSlippageContainer {
   position: relative;
   z-index: 1;
@@ -48,7 +51,6 @@
   width: 100%;
 }
 
-.tokenPrice,
 .balance {
   position: absolute;
   top: -0.125rem;
@@ -59,14 +61,6 @@
 
   font-size: 0.8125rem;
   color: var(--color-gray-1);
-}
-
-.tokenPrice {
-  font-weight: 400;
-}
-
-.tokenPriceBold {
-  font-weight: 600;
 }
 
 .balanceLink {
@@ -97,6 +91,7 @@
   flex-direction: column;
 }
 
+.advancedSlippageButton,
 .slippageLabel {
   display: flex;
   align-items: center;
@@ -154,26 +149,7 @@
 }
 
 .tokenIcon {
-  width: 1.5rem;
-  height: 1.5rem;
-
-  border-radius: 50%;
-}
-
-.tokenBlockchainIcon {
-  position: absolute;
-  z-index: 1;
-  top: 0.875rem;
-  right: -0.25rem;
-
-  width: 0.75rem;
-  height: 0.75rem;
-
-  border-radius: 50%;
-
-  /* stylelint-disable-next-line plugin/whole-pixel */
-  box-shadow: 0 0 0 0.0938rem var(--color-input-button-background),
-        inset 0 0 0 0.125rem var(--color-input-button-background);
+  --color-background-first: var(--color-input-button-background);
 }
 
 .tokenContent {
@@ -193,7 +169,7 @@
   z-index: 1;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -45%);
+  transform: translate(-50%, -31%);
 
   display: flex;
   align-items: center;
@@ -252,10 +228,27 @@
   cursor: var(--custom-cursor, pointer);
 }
 
+.tokenPrice,
 .feeText {
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--color-gray-2);
+  white-space: nowrap;
+}
+
+.tokenPrice + .feeText::before {
+  content: '';
+
+  display: inline-block;
+
+  width: 0.125rem;
+  height: 0.125rem;
+  margin: 0 0.3125rem 0 0.0625rem;
+
+  vertical-align: 0.1875rem;
+
+  background-color: var(--color-gray-2);
+  border-radius: 50%;
 }
 
 .feeIcon {
@@ -421,6 +414,24 @@
   width: 100%;
   max-width: 100% !important;
 }
+
+.swapArrowIcon {
+  margin: 0 -0.125rem;
+
+  font-size: 1.25rem;
+
+  &:global(.icon-arrow-right) {
+    font-weight: 600 !important;
+  }
+}
+
+.swapArrowIconTitle {
+  line-height: 1;
+  vertical-align: -0.125rem;
+
+  &:global(.icon-arrow-right) {
+    font-weight: 700 !important;
+  }}
 
 .priceImpact {
   cursor: var(--custom-cursor, pointer);
@@ -683,7 +694,6 @@
   text-align: center;
 }
 
-.tokenIconWrapper,
 .arrowContainer,
 .arrowContainerInverted {
   position: relative;
@@ -779,24 +789,7 @@ $animation-time: 350ms;
 }
 
 .swapShortInfoTokenIcon {
-  width: 1.25rem;
-  height: 1.25rem;
-
-  border-radius: 50%;
-}
-
-.swapShortInfoBlockchainIcon {
-  position: absolute;
-  z-index: 1;
-  top: 0.75rem;
-  left: 0.75rem;
-
-  width: 0.5625rem;
-  height: 0.5625rem;
-
-  border-radius: 50%;
-  box-shadow: 0 0 0 0.0625rem var(--color-activity-blue-background),
-              0 0 0 0.0625rem var(--color-background-second);
+  --color-background-first: var(--color-activity-blue-background);
 }
 
 .qrCode {

@@ -35,7 +35,7 @@ interface OwnProps {
   isLoading?: boolean;
   operationType?: OperationType;
   cancelLabel?: string;
-  submitLabel: string;
+  submitLabel: string | TeactNode[];
   stickerSize?: number;
   placeholder?: string;
   error?: string;
@@ -142,12 +142,10 @@ function PasswordForm({
   });
 
   useEffect(() => {
-    return isSubmitDisabled
+    return isSubmitDisabled || isLoading
       ? undefined
-      : captureKeyboardListeners({
-        onEnter: handleSubmit,
-      });
-  }, [handleSubmit, isSubmitDisabled]);
+      : captureKeyboardListeners({ onEnter: handleSubmit });
+  }, [handleSubmit, isLoading, isSubmitDisabled]);
 
   function getPinPadTitle() {
     switch (operationType) {
@@ -165,7 +163,7 @@ function PasswordForm({
       case 'swap':
         return 'Confirm Swap';
       default:
-        return 'Confirm Operation';
+        return 'Confirm Action';
     }
   }
 
@@ -235,7 +233,7 @@ function PasswordForm({
     return (
       <div className={styles.verify}>
         {lang(operationType === 'transfer'
-          ? 'Please confirm transaction using biometrics.' : 'Please confirm operation using biometrics.')}
+          ? 'Please confirm transaction using biometrics' : 'Please confirm operation using biometrics')}
       </div>
     );
   }

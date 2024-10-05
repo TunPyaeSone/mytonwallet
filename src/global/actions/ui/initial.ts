@@ -1,11 +1,16 @@
-import type { Account, AccountState, NotificationType } from '../../types';
+import type {
+  Account, AccountSettings, AccountState, NotificationType,
+} from '../../types';
 import { ApiCommonError, ApiTransactionDraftError, ApiTransactionError } from '../../../api/types';
 import { AppState } from '../../types';
 
-import { IS_CAPACITOR, IS_EXTENSION } from '../../../config';
+import {
+  DEFAULT_SWAP_SECOND_TOKEN_SLUG, IS_CAPACITOR, IS_EXTENSION, TONCOIN,
+} from '../../../config';
 import { requestMutation } from '../../../lib/fasterdom/fasterdom';
 import { parseAccountId } from '../../../util/account';
 import authApi from '../../../util/authApi';
+import { initCapacitorWithGlobal } from '../../../util/capacitor';
 import { processDeeplinkAfterSignIn } from '../../../util/deeplink';
 import { omit } from '../../../util/iteratees';
 import { clearPreviousLangpacks, setLanguage } from '../../../util/langProvider';
@@ -32,7 +37,7 @@ import {
   selectCurrentNetwork,
   selectNetworkAccounts,
   selectNetworkAccountsMemoized,
-  selectNewestTxIds,
+  selectNewestTxTimestamps,
 } from '../../selectors';
 
 const ANIMATION_DELAY_MS = 320;
@@ -75,15 +80,21 @@ addActionHandler('init', (_, actions) => {
 });
 
 addActionHandler('afterInit', (global) => {
-  const { theme, animationLevel, langCode } = global.settings;
+  const {
+    theme, animationLevel, langCode, authConfig,
+  } = global.settings;
 
   switchTheme(theme);
   switchAnimationLevel(animationLevel);
-  setStatusBarStyle();
+  setStatusBarStyle({
+    forceDarkBackground: false,
+  });
   void setLanguage(langCode);
   clearPreviousLangpacks();
 
-  if (!IS_CAPACITOR) {
+  if (IS_CAPACITOR) {
+    void initCapacitorWithGlobal(authConfig);
+  } else {
     document.addEventListener('click', initializeSounds, { once: true });
   }
 });
@@ -136,6 +147,18 @@ addActionHandler('dismissDialog', (global) => {
 });
 
 addActionHandler('selectToken', (global, actions, { slug } = {}) => {
+  if (slug) {
+    if (slug === TONCOIN.slug) {
+      actions.setDefaultSwapParams({ tokenInSlug: DEFAULT_SWAP_SECOND_TOKEN_SLUG, tokenOutSlug: slug });
+    } else {
+      actions.setDefaultSwapParams({ tokenOutSlug: slug });
+    }
+    actions.changeTransferToken({ tokenSlug: slug });
+  } else {
+    actions.setDefaultSwapParams({ tokenInSlug: undefined, tokenOutSlug: undefined });
+    actions.changeTransferToken({ tokenSlug: TONCOIN.slug });
+  }
+
   return updateCurrentAccountState(global, { currentTokenSlug: slug });
 });
 
@@ -147,6 +170,14 @@ addActionHandler('showError', (global, actions, { error } = {}) => {
 
     case ApiTransactionDraftError.InvalidToAddress:
       actions.showDialog({ message: 'Invalid address' });
+      break;
+
+    case ApiTransactionDraftError.StateInitWithoutBin:
+      actions.showDialog({ message: '$state_init_requires_bin' });
+      break;
+
+    case ApiTransactionDraftError.InvalidStateInit:
+      actions.showDialog({ message: '$state_init_invalid' });
       break;
 
     case ApiTransactionDraftError.InsufficientBalance:
@@ -181,49 +212,15 @@ addActionHandler('showError', (global, actions, { error } = {}) => {
       actions.showDialog({ message: 'Transfer was unsuccessful. Try again later.' });
       break;
 
-    case ApiTransactionDraftError.UnsupportedHardwareOperation:
-      actions.showDialog({ message: 'Unfortunately, this operation is not yet supported by Ledger wallet.' });
-      break;
-
-    case ApiTransactionDraftError.EncryptedDataNotSupported:
-      actions.showDialog({ message: 'Encrypted comments are not yet supported by Ledger.' });
-      break;
-
     case ApiTransactionDraftError.InactiveContract:
       actions.showDialog({
         message: '$transfer_inactive_contract_error',
       });
       break;
 
-    case ApiTransactionDraftError.UnsupportedHardwareNftOperation:
-    case ApiTransactionError.UnsupportedHardwareNftOperation:
+    case ApiTransactionError.NotSupportedHardwareOperation:
       actions.showDialog({
-        message: 'Transferring NFT is not yet supported by Ledger.',
-      });
-      break;
-
-    case ApiTransactionDraftError.UnsupportedHardwareContract:
-    case ApiTransactionError.UnsupportedHardwareContract:
-      actions.showDialog({
-        message: 'Transaction to this smart contract is not yet supported by Ledger.',
-      });
-      break;
-
-    case ApiTransactionDraftError.NonAsciiCommentForHardwareOperation:
-    case ApiTransactionError.NonAsciiCommentForHardwareOperation:
-      actions.showDialog({
-        message: 'The current version of Ledger only supports English-language comments without special characters.',
-      });
-      break;
-
-    case ApiTransactionDraftError.TooLongCommentForHardwareOperation:
-    case ApiTransactionError.TooLongCommentForHardwareOperation:
-      actions.showDialog({ message: 'Comment is too long.' });
-      break;
-
-    case ApiTransactionError.UnsupportedHardwarePayload:
-      actions.showDialog({
-        message: 'This type of transaction is not yet supported by Ledger.',
+        message: '$ledger_not_supported_operation',
       });
       break;
 
@@ -356,6 +353,13 @@ addActionHandler('signOut', async (global, actions, payload) => {
         return byId;
       }, {} as Record<string, AccountState>);
 
+      const settingsById = Object.entries(global.settings.byAccountId).reduce((byId, [accountId, settings]) => {
+        if (parseAccountId(accountId).network !== network) {
+          byId[accountId] = settings;
+        }
+        return byId;
+      }, {} as Record<string, AccountSettings>);
+
       global = updateCurrentAccountId(global, nextAccountId);
 
       global = {
@@ -365,6 +369,10 @@ addActionHandler('signOut', async (global, actions, payload) => {
           byId: accountsById,
         },
         byAccountId,
+        settings: {
+          ...global.settings,
+          byAccountId: settingsById,
+        },
       };
 
       setGlobal(global);
@@ -381,14 +389,15 @@ addActionHandler('signOut', async (global, actions, payload) => {
   } else {
     const prevAccountId = global.currentAccountId!;
     const nextAccountId = accountIds.find((id) => id !== prevAccountId)!;
-    const nextNewestTxIds = selectNewestTxIds(global, nextAccountId);
+    const nextNewestTxTimestamps = selectNewestTxTimestamps(global, nextAccountId);
 
-    await callApi('removeAccount', prevAccountId, nextAccountId, nextNewestTxIds);
+    await callApi('removeAccount', prevAccountId, nextAccountId, nextNewestTxTimestamps);
 
     global = getGlobal();
 
     const accountsById = omit(global.accounts!.byId, [prevAccountId]);
     const byAccountId = omit(global.byAccountId, [prevAccountId]);
+    const settingsByAccountId = omit(global.settings.byAccountId, [prevAccountId]);
 
     global = updateCurrentAccountId(global, nextAccountId);
 
@@ -399,6 +408,10 @@ addActionHandler('signOut', async (global, actions, payload) => {
         byId: accountsById,
       },
       byAccountId,
+      settings: {
+        ...global.settings,
+        byAccountId: settingsByAccountId,
+      },
     };
 
     setGlobal(global);

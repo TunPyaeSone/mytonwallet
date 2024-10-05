@@ -27,8 +27,9 @@ Your have entered an insecure password, which can be easily guessed by scammers.
 Continue or change password to something more secure?: Fortfahren oder das Passwort in etwas Sichereres ändern?
 Change: Ändern.
 "%1$d Secret Words": "%1$d Geheime Wörter"
+Secret Words: Geheimwörtern
 $auth_import_mnemonic_description: |
-  Sie können den Zugang zu Ihrer Wallet wiederherstellen, indem Sie die %1$d geheimen Wörter eingeben, die Sie notiert haben, als Sie die wallet erstellt haben.
+  Sie können den Zugriff auf Ihr Wallet wiederherstellen, indem Sie die **12 oder 24 geheimen Wörter** eingeben, die Sie beim Erstellen des Wallets notiert haben.
 Let’s make sure your secrets words are recorded correctly.: Stellen Sie sicher, dass Ihre geheimen Wörter korrekt aufgezeichnet sind.
 $mnemonic_check_words_list: Bitte geben Sie die Wörter **%1$s** unten ein.
 $mnemonic_check_error: Die eingegebenen geheimen Wörter stimmen nicht mit denen in der Liste überein. Bitte versuchen Sie es erneut.
@@ -99,7 +100,7 @@ Warning!: Achtung!
 Log Out: Wallet entfernen
 $logout_without_backup_warning: Sie haben diese Wallet nicht gesichert. Wenn Sie sie jetzt entfernen, verlieren Sie den Zugriff auf Ihre Token und NFTs.
 $logout_accounts_without_backup_warning: Sie haben %links% nicht gesichert. Wenn Sie fortfahren, verlieren Sie den Zugriff auf Ihre Token und NFTs.
-$logout_warning: Das wird die aktuelle Wallet aus der App entfernen. Stellen Sie sicher, dass Sie Ihre %1$d Geheimwörter gesichert haben.
+$logout_warning: Dies wird das aktuelle Wallet aus der App entfernen. Stellen Sie sicher, dass Sie Ihre **Geheimwörter** gesichert haben.
 Your address was copied!: Ihre Adresse wurde kopiert!
 Show QR Code: QR-Code anzeigen
 Create Deposit Link: Einzahlungslink erstellen
@@ -123,7 +124,13 @@ Toggle Hide Tiny Transfers: Kleine Überweisungen ausblenden umschalten
 Network: Network
 Developer Options: Entwickleroptionen
 Confirmation: Bestätigung
-Data to sign: Zu signierende Daten
+Signing Data: Signierdaten
+Contract Initialization Data: Vertrag Initialisierung Daten
+$dont_have_required_token: Sie haben den erforderlichen Token nicht, aber er kann umgetauscht werden.
+$unknown_token_address: Unbekannte Token-Adresse.
+$dont_have_required_nft: Sie haben das erforderliche NFT nicht, um es zu senden.
+$state_init_requires_bin: Die Vertragsinitialisierungsdaten erfordern den Parameter "bin".
+$state_init_invalid: Ungültige Vertragsinitialisierungsdaten.
 $signature_warning: Das Signieren von benutzerdefinierten Daten ist sehr gefährlich. Verwenden Sie es nur, wenn Sie der Quelle vertrauen.
 Sign: Signieren
 Done!: Erledigt!
@@ -136,7 +143,6 @@ Sender: Absender
 Recipient: Empfänger
 Address was copied!: Adresse wurde kopiert!
 Repeat: Wiederholen
-Receive: Empfangen
 Switch Account: Konto wechseln
 Copy wallet address: Wallet adresse kopieren
 View address on %ton_explorer_name%: Adresse im %ton_explorer_name% anzeigen
@@ -149,7 +155,6 @@ No NFTs yet: Noch keine NFTs vorhanden
 $nft_explore_offer: |
   Erkunden Sie einen Marktplatz, um
   bestehende NFT-Sammlungen zu entdecken.
-$nft_hardware_unsupported: Leider wird die Übertragung von NFT von der Ledger-Wallet noch nicht unterstützt.
 Open Getgems: Getgems öffnen
 Transaction is not completed: Die Transaktion ist nicht abgeschlossen.
 Received: Empfangen
@@ -160,6 +165,7 @@ Wallet is not backed up: Die Wallet ist nicht gesichert.
 Testnet Version: Testnet Version
 Error reading clipboard: Fehler beim Lesen der Zwischenablage
 $fee_value: "Gebühr: %fee%"
+Pay fee with %stars_symbol%: "Bezahlen mit %stars_symbol%"
 Loading...: Laden...
 Recipient Address: Empfänger adresse
 Wallet address or domain: Wallet adresse oder Domain
@@ -195,11 +201,7 @@ $tiny_transfers_help: Schalten Sie dies aus, um Transaktionen von weniger als $%
 Today: Heute
 Yesterday: Gestern
 Now: Jetzt
-$receive_ton_description: |
-  Sie können Ihre Adresse teilen, einen QR-Code scannen oder
-  einen Einzahlungslink erstellen, um Kryptowährung zu
-  erhalten.
-Your address: Ihre Adresse
+$receive_ton_description: Scannen Sie diesen QR-Code oder teilen Sie Ihre Adresse, um Ihr Wallet-Guthaben aufzuladen.
 Wrong password, please try again.: Falsches Passwort, bitte versuchen Sie es erneut.
 Appearance: Erscheinungsbild
 Light: Hell
@@ -330,7 +332,6 @@ Message is encrypted.: Die Nachricht ist verschlüsselt.
 $dapp_ledger_warning1: Sie sind dabei, eine Mehrweg-Transaktion mit Ihrer **Ledger**-Wallet durchzuführen. Sie müssen jede zugrunde liegende Transaktion **manuell nacheinander** signieren.
 $dapp_ledger_warning2: Bitte nehmen Sie sich Zeit und unterbrechen Sie den Prozess nicht.
 Agree: Zustimmen
-Unfortunately, this operation is not yet supported by Ledger wallet.: Die Hardware-Wallet unterstützt dieses Datenformat nicht.
 SwapTitle: Tausch
 Swap: Tausch
 You sell: Sie verkaufen
@@ -342,7 +343,7 @@ Included: Inklusive
 Price Impact: Preisauswirkung
 Minimum Received: Mindestbetrag erhalten
 Slippage: Schlupf
-$swap_from_to: Tausch von %from% zu %to%.
+$swap_from_to: Tauschen %from% %icon% %to%.
 The exchange rate is below market value!: Der Wechselkurs liegt %value% unter dem Marktwert!
 Invalid Pair: Ungültiges Paar
 We do not recommend to perform an exchange, try to specify a lower amount.: Wir empfehlen keine Durchführung des Austauschs. Versuchen Sie, einen niedrigeren Betrag anzugeben.
@@ -356,7 +357,7 @@ $swap_slippage_tooltip2: Wenn sich während der Verarbeitung Ihres Tausches der 
 Coins have been swapped!: Die Coins wurden getauscht!
 Slippage not specified: Schlupf nicht angegeben
 Slippage too high: Schlupf zu hoch
-Not enough TON: Nicht genügend TON
+Not Enough %symbol%: Nicht genügend %symbol%
 Use Responsibly: Verantwortungsbewusst nutzen
 $auth_responsibly_description1: |
   MyTonWallet ist eine **selbstverwaltete** Wallet, das bedeutet, dass **nur Sie** die volle Kontrolle und vor allem **volle Verantwortung** für Ihre Gelder haben.
@@ -427,7 +428,7 @@ Biometric Authentication: Biometrische Authentifizierung
 If you turn off biometric protection, you will need to create a password.: Wenn Sie den biometrischen Schutz ausschalten, müssen Sie ein Passwort erstellen.
 Enter your current password: Geben Sie Ihr aktuelles Passwort ein
 Turn On Biometrics: Biometrische Authentifizierung aktivieren
-Please confirm transaction using biometrics.: Bitte bestätigen Sie die Transaktion mit Hilfe der Biometrie.
+Please confirm transaction using biometrics: Bitte bestätigen Sie die Transaktion mit Hilfe der Biometrie
 Enabling biometric confirmation will reset the password.: Das Aktivieren der biometrischen Bestätigung setzt das Passwort zurück.
 Biometric Registration: Biometrische Registrierung
 Step 1 of 2. Registration: Schritt 1 von 2. Registrierung
@@ -446,7 +447,7 @@ Use Password: Passwort verwenden
 Biometrics Disabled: Biometrie deaktiviert
 Biometrics Enabled: Biometrie aktiviert
 A request is already pending: Es liegt bereits eine ausstehende Anfrage vor
-Please confirm operation using biometrics.: Bitte bestätigen Sie die Operation mit Hilfe der Biometrie.
+Please confirm operation using biometrics: Bitte bestätigen Sie die Operation mit Hilfe der Biometrie
 Scan QR Code: QR-Code scannen
 Permission denied. Please grant camera permission to use the QR code scanner.: Berechtigung verweigert. Bitte erteilen Sie die Kamera-Berechtigung, um den QR-Code-Scanner zu verwenden.
 Unsupported QR code format: Nicht unterstütztes QR-Code-Format
@@ -461,7 +462,7 @@ Yuan: Yuan
 Bitcoin: Bitcoin
 Toncoin: Toncoin
 $max_balance: "Maximal: %balance%"
-$unstake_information_instantly: Sie erhalten Ihre Einzahlung sofort.
+$unstake_information_instantly: Sie erhalten Ihre Einzahlung sofort
 Select Token: Token auswählen
 MY: MEINE
 POPULAR: POPULAR
@@ -493,13 +494,13 @@ Wrong code, please try again: Falscher Code, bitte versuchen Sie es erneut.
 Scan your fingerprint: Legen Sie Ihren Fingerabdruck auf.
 Incorrect code, please try again.: Falscher Code, bitte versuchen Sie es erneut.
 Correct: Korrekt
-Confirm Operation: Operation bestätigen
+Confirm Action: Aktion bestätigen
 Confirm Swap: Swap bestätigen
 "%amount% to %address%": "%amount% zu %address%"
 "%amount_from% to %amount_to%": "%amount_from% zu %amount_to%"
 Failed to enable biometrics.: Fehler beim Aktivieren der Biometrie.
-Please try to confirm your biometrics again.: Bitte versuchen Sie erneut, Ihre Biometrie zu bestätigen.
-Unknown error.: Unbekannter Fehler.
+Please try to confirm your biometrics again: Bitte versuchen Sie erneut, Ihre Biometrie zu bestätigen
+Unknown error: Unbekannter Fehler
 Are you sure you want to disable Face ID?: Sind Sie sicher, dass Sie Face ID deaktivieren möchten?
 Are you sure you want to disable Touch ID?: Sind Sie sicher, dass Sie Touch ID deaktivieren möchten?
 Are you sure you want to disable biometrics?: Sind Sie sicher, dass Sie die Biometrie deaktivieren möchten?
@@ -509,7 +510,6 @@ No Activity: Keine aktivität
 Add / Buy: Aufladen
 Buy with Card: Mit Karte kaufen
 Buy with Crypto: Mit Krypto kaufen
-Receive with QR or Invoice: Mit QR oder Rechnung empfangen
 Cannot load widget: Widget kann nicht geladen werden
 Explore: Erkunden
 No partners yet: Noch keine Partner
@@ -529,12 +529,7 @@ $wallet_switch_version_2: zu einer anderen Wallet-Version wechseln
 or import from: oder importieren von
 $insufficient_fee: "Unzureichende Gebühren: %fee%"
 Required: Erforderlich
-Transaction to this smart contract is not yet supported by Ledger.: Die Transaktion zu diesem Smart Contract wird von Ledger noch nicht unterstützt.
-This type of transaction is not yet supported by Ledger.: Diese Art von Transaktion wird von Ledger noch nicht unterstützt.
-The current version of Ledger only supports English-language comments without special characters.: Die aktuelle Version von Ledger unterstützt nur englischsprachige Kommentare ohne Sonderzeichen.
 Comment is too long.: Der Kommentar ist zu lang.
-Transferring NFT is not yet supported by Ledger.: Die Übertragung von NFT wird von Ledger noch nicht unterstützt.
-Encrypted comments are not yet supported by Ledger.: Verschlüsselte Kommentare werden von Ledger noch nicht unterstützt.
 Memo: Memo
 Memo was copied!: Memo wurde kopiert!
 $hide_tokens_no_cost_help: |
@@ -546,6 +541,19 @@ To use this feature, first enable biometrics in your phone settings.: Um diese F
 Open Settings: Einstellungen öffnen
 You are about to transfer an important service token, which is needed to withdraw your deposit from staking.: Sie sind dabei, einen wichtigen Service-Token zu übertragen, der benötigt wird, um Ihre Einzahlung vom Einsatz abzuheben.
 No Price: Kein preis
+$ledger_not_supported_operation: Diese Operation wird von Ihrer Version der Ledger TON App nicht unterstützt. Bitte aktualisieren Sie sie mit Ledger Live.
+$ledger_unsupported_ton_connect: TonConnect wird nicht durch die Version Ihrer Ledger Ton App unterstützt. Bitte aktualisieren Sie es mit Ledger Live.
+$dapp_transfer_tokens_burn: Brennen von %amount%
+$dapp_dns_set_wallet_payload: Ändern der verknüpften Brieftasche der Domäne %domain% in %address%
+$dapp_dns_delete_wallet_payload: Verknüpfte Brieftasche der Domäne %domain% wird gelöscht
+$dapp_dns_change_record_payload: Ändern des „%category%“-Eintrags der Domäne %domain% in %value%
+$dapp_dns_delete_record_payload: „%category%“-Eintrag der Domäne %domain% wird gelöscht
+$dapp_token_bridge_pay_swap_payload: Bestätigung des Austauschs über die Cross-Chain-Bridge
+$dapp_liquid_staking_deposit_payload: Einzahlung zum Liquid Staking
+$dapp_liquid_staking_vote_payload: Abstimmung „%vote%“ für Vorschlag %votingAddress%
+$dapp_single_nominator_change_validator_payload: Adresse des SingleNominator-Staking-Vertragsvalidators in %address% ändern
+$dapp_single_nominator_withdraw_payload: Abhebung von %amount% TON vom SingleNominator-Staking-Vertrag
+$dapp_vesting_add_whitelist_payload: "%address% zur Vesting Wallet-Whitelist hinzufügen"
 Search or enter address...: Adresse suchen oder eingeben...
 Connecting dapps is not yet supported by Ledger.: Das Verbinden von Dapps wird von Ledger noch nicht unterstützt.
 Time synchronization issue. Please ensure your device's time settings are correct.: Problem mit der Zeitsynchronisierung. Bitte stellen Sie sicher, dass die Zeiteinstellungen Ihres Geräts korrekt sind.
@@ -605,22 +613,62 @@ until %date%: bis %date%
 Unfreeze: Auftauen
 Claim: Beanspruchen
 Confirm Unfreezing: Bestätigen Sie das Auftauen
-Insufficient Balance for Fee.: Unzureichendes Guthaben für Gebühr.
+Insufficient Balance for Fee: Unzureichendes Guthaben für Gebühr
 $fee_value_bold: "**Gebühr:** %fee%"
+Security: Sicherheit
+To avoid entering the passcode every time, you can use biometrics.: Um die Passcode-Eingabe jedes Mal zu vermeiden, können Sie biometrische Daten verwenden.
+Change Passcode: Passcode ändern
+Change Password: Passwort ändern
+Confirm Password: Passwort bestätigen
+The passcode will be changed for all your wallets.: Der Passcode wird für alle Ihre Wallets geändert.
+Password Changed!: Passwort geändert!
+Passcode Changed!: Passcode geändert!
+New code set successfully: Neuer Code erfolgreich festgelegt
+Codes don’t match: Codes stimmen nicht überein
+Enter your new code: Geben Sie Ihren neuen Code ein
+Re-enter your new code: Geben Sie Ihren neuen Code erneut ein
 MyTonWallet Features: MyTonWallet Funktionen
 Install on Desktop: Auf dem Desktop installieren
 Install on Mobile: Auf dem Mobilgerät installieren
 Install App: App installieren
 WrongNetwork: Die Dapp hat eine Transaktion von einem anderen Netzwerk angefordert.
 Hide: Verstecken
+Hidden NFTs: Versteckte NFTs
+Hidden By Me: Von mir versteckt
+Probably Scam: Wahrscheinlich Betrug
+$settings_nft_probably_scam_description: Diese NFTs wurden automatisch von der Anti-Betrug-Schutz deaktiviert. Sie können die erforderlichen NFTs wieder zur Startseite zurückbringen, wenn Sie denken, dass sie fälschlicherweise in dieser Liste enthalten sind.
+Unhide: Anzeigen
+Hide All: Alle ausblenden
 Hide NFT: Verberge NFT
-Are you sure you want to hide this NFT? This action cannot be undone.: Sind Sie sicher, dass Sie dieses NFT verbergen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
 Reload Page: Seite neu laden
 Open in Safari: In Safari öffnen
 Open in Browser: Im Browser öffnen
 CopyURL: URL kopieren
 Share: Teilen
+Unhide NFT: NFT anzeigen
+$unhide_nft_warning: Sind Sie sicher, dass Sie %name% anzeigen möchten? Dieses NFT sieht verdächtig aus und könnte nicht zu seinem Namen und seiner Beschreibung passen.
+Hide NFTs: NFTs ausblenden
+Are you sure you want to hide this NFT collection containing %number% NFTs?: Sind Sie sicher, dass Sie diese NFT-Sammlung mit %number% NFTs ausblenden möchten?
+Are you sure you want to hide these %number% NFTs?: Bist du sicher, dass du diese %number% NFTs ausblenden möchtest?
+Show: Anzeigen
 Confirm Sending: Senden bestätigen
 Confirm Burning: Brennen bestätigen
 Confirm Passcode: Passcode bestätigen
 Enter your code: Gib deinen Code ein
+$hardware_payload_warning: Ein externer Dienst fordert Zugriff auf Ihre Wallet an – dies kann zum Verlust von Mitteln führen. Brechen Sie den Vorgang ab, wenn Sie sich der Zuverlässigkeit dieses Dienstes nicht sicher sind.
+$hardware_blind_sign_not_enabled: |
+  Ein externer Dienst fordert Zugriff auf Ihre Wallet an – dies kann zum Verlust von Mitteln führen. Brechen Sie den Vorgang ab, wenn Sie sich der Zuverlässigkeit dieses Dienstes nicht sicher sind.
+
+  Um fortzufahren, aktivieren Sie die Option „Blindsignatur“ in den Einstellungen der TON App auf dem Ledger.
+Switch to W5: Zu W5 wechseln
+Not Scam: Kein Betrug
+Untitled: Unbenannt
+$swap_too_small_amount: Zu kleiner Betrag
+Not enough %symbol%: "Nicht genug %symbol%"
+$receive_tron_description: Scannen Sie diesen QR-Code oder teilen Sie Ihre Adresse, um Ihr Wallet-Guthaben aufzuladen.
+You have just created a new multichain wallet: Sie haben gerade eine neue Multichain-Wallet erstellt
+Now you can transfer tokens from your TON and TRON wallets.: Jetzt können Sie Tokens von Ihren TON- und TRON-Wallets übertragen.
+Enter Secret Words: Geheimwörter eingeben
+Turn this off so you can manually download updates and verify signatures.: Schalten Sie dies aus, damit Sie Updates manuell herunterladen und Signaturen überprüfen können.
+InvalidMnemonic: Ihre mnemonischen Wörter sind ungültig
+NFT Menu: NFT-Menü

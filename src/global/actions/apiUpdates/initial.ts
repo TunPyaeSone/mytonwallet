@@ -1,9 +1,11 @@
+import type { ApiChain } from '../../../api/types';
 import { StakingState } from '../../types';
 
 import { areDeepEqual } from '../../../util/areDeepEqual';
-import { buildCollectionByKey, pick } from '../../../util/iteratees';
+import { buildCollectionByKey } from '../../../util/iteratees';
+import { callActionInNative } from '../../../util/multitab';
 import { openUrl } from '../../../util/openUrl';
-import { IS_IOS_APP } from '../../../util/windowEnvironment';
+import { IS_DELEGATING_BOTTOM_SHEET, IS_IOS_APP } from '../../../util/windowEnvironment';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import {
   addNft,
@@ -29,8 +31,6 @@ addActionHandler('apiUpdate', (global, actions, update) => {
     case 'updateBalances': {
       global = updateBalances(global, update.accountId, update.balancesToUpdate);
       setGlobal(global);
-
-      actions.updateDeletionListForActiveTokens({ accountId: update.accountId });
       break;
     }
 
@@ -46,7 +46,7 @@ addActionHandler('apiUpdate', (global, actions, update) => {
       let balance = 0n;
 
       if (stakingState.type === 'nominators') {
-        balance = stakingState.amount + stakingState.pendingDepositAmount;
+        balance = stakingState.amount;
         global = updateAccountStakingState(global, accountId, {
           type: stakingState.type,
           balance,
@@ -104,8 +104,6 @@ addActionHandler('apiUpdate', (global, actions, update) => {
         baseCurrency,
       });
       setGlobal(global);
-
-      actions.updateDeletionListForActiveTokens();
       break;
     }
 
@@ -157,13 +155,22 @@ addActionHandler('apiUpdate', (global, actions, update) => {
 
     case 'updateAccount': {
       const { accountId, partial } = update;
-      global = updateAccount(global, accountId, pick(partial, ['address']));
+      global = updateAccount(global, accountId, {
+        addressByChain: {
+          ton: partial.address,
+        } as Record<ApiChain, string>,
+      });
       setGlobal(global);
       break;
     }
 
     case 'updateConfig': {
-      const { isLimited: isLimitedRegion, isCopyStorageEnabled, supportAccountsCount } = update;
+      const {
+        isLimited: isLimitedRegion,
+        isCopyStorageEnabled,
+        supportAccountsCount,
+        countryCode,
+      } = update;
 
       global = updateRestrictions(global, {
         isLimitedRegion,
@@ -171,25 +178,18 @@ addActionHandler('apiUpdate', (global, actions, update) => {
         isOnRampDisabled: IS_IOS_APP && isLimitedRegion,
         isCopyStorageEnabled,
         supportAccountsCount,
+        countryCode,
       });
       setGlobal(global);
       break;
     }
 
     case 'updateWalletVersions': {
-      const { accountId, versions, currentVersion } = update;
-      global = {
-        ...global,
-        walletVersions: {
-          ...global.walletVersions,
-          currentVersion,
-          byId: {
-            ...global.walletVersions?.byId,
-            [accountId]: versions,
-          },
-        },
-      };
-      setGlobal(global);
+      if (IS_DELEGATING_BOTTOM_SHEET) {
+        callActionInNative('apiUpdateWalletVersions', update);
+      }
+
+      actions.apiUpdateWalletVersions(update);
       break;
     }
 

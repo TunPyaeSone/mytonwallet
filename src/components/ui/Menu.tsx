@@ -1,12 +1,11 @@
 import type { FC } from '../../lib/teact/teact';
-import React, { useEffect, useRef } from '../../lib/teact/teact';
+import React, { beginHeavyAnimation, useEffect, useRef } from '../../lib/teact/teact';
 
 import buildClassName from '../../util/buildClassName';
 import captureEscKeyListener from '../../util/captureEscKeyListener';
 import stopEvent from '../../util/stopEvent';
 
 import useEffectWithPrevDeps from '../../hooks/useEffectWithPrevDeps';
-import { dispatchHeavyAnimationEvent } from '../../hooks/useHeavyAnimationCheck';
 import useHistoryBack from '../../hooks/useHistoryBack';
 import useShowTransition from '../../hooks/useShowTransition';
 import useVirtualBackdrop from '../../hooks/useVirtualBackdrop';
@@ -32,6 +31,7 @@ type OwnProps = {
   noBackdrop?: boolean;
   withPortal?: boolean;
   noCloseOnBackdrop?: boolean;
+  shouldCleanup?: boolean;
   onCloseAnimationEnd?: () => void;
   onClose?: () => void;
   onMouseEnter?: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
@@ -57,6 +57,7 @@ const Menu: FC<OwnProps> = ({
   noBackdrop = false,
   withPortal,
   noCloseOnBackdrop = false,
+  shouldCleanup,
   onCloseAnimationEnd,
   onClose,
   onMouseEnter,
@@ -72,6 +73,7 @@ const Menu: FC<OwnProps> = ({
   });
 
   const {
+    shouldRender,
     transitionClassNames,
   } = useShowTransition(
     isOpen,
@@ -88,7 +90,7 @@ const Menu: FC<OwnProps> = ({
 
   useEffectWithPrevDeps(([prevIsOpen]) => {
     if (isOpen || (!isOpen && prevIsOpen === true)) {
-      dispatchHeavyAnimationEvent(ANIMATION_DURATION);
+      beginHeavyAnimation(ANIMATION_DURATION);
     }
   }, [isOpen]);
 
@@ -106,6 +108,10 @@ const Menu: FC<OwnProps> = ({
 
   const transformOriginYStyle = transformOriginY !== undefined ? `${transformOriginY}px` : undefined;
   const transformOriginXStyle = transformOriginX !== undefined ? `${transformOriginX}px` : undefined;
+
+  if (shouldCleanup && !shouldRender) {
+    return undefined;
+  }
 
   const menu = (
     <div

@@ -44,14 +44,9 @@ interface StateProps {
   isTonAppConnected?: boolean;
 }
 
+const HARDWARE_ACCOUNT_ADDRESS_SHIFT = 3;
 const ACCOUNT_ADDRESS_SHIFT = 4;
 const ACCOUNT_ADDRESS_SHIFT_END = 4;
-
-const LEDGER_ALLOWED_DAPPS = new Set([
-  'https://multisig.ton.org',
-  'https://ton.ninja',
-  'https://tontogether.com',
-]);
 
 function DappConnectModal({
   state,
@@ -82,10 +77,7 @@ function DappConnectModal({
   const { renderingKey, nextKey } = useModalTransitionKeys(state ?? 0, isOpen);
 
   const iterableAccounts = useMemo(() => Object.entries(accounts || {}), [accounts]);
-  const isHardwareAccountSelected = accounts?.[selectedAccount]?.isHardware;
   const isLoading = dapp === undefined;
-
-  const isHardwareAllowed = dapp && LEDGER_ALLOWED_DAPPS.has(dapp.url);
 
   useEffect(() => {
     if (!currentAccountId) return;
@@ -100,16 +92,18 @@ function DappConnectModal({
 
   const handleSubmit = useLastCallback(() => {
     closeConfirm();
+    const { isHardware } = accounts![selectedAccount];
+    const { isPasswordRequired, isAddressRequired } = requiredPermissions || {};
 
-    if (!requiredProof) {
+    if (!requiredProof || (!isHardware && isAddressRequired && !isPasswordRequired)) {
       submitDappConnectRequestConfirm({
         accountId: selectedAccount,
       });
 
       cancelDappConnectRequestConfirm();
-    } else if (accounts![currentAccountId].isHardware && requiredProof) {
+    } else if (isHardware) {
       setDappConnectRequestState({ state: DappConnectState.ConnectHardware });
-    } else if (requiredPermissions?.isPasswordRequired) {
+    } else {
       // The confirmation window must be closed before the password screen is displayed
       requestAnimationFrame(() => {
         setDappConnectRequestState({ state: DappConnectState.Password });
@@ -136,12 +130,11 @@ function DappConnectModal({
 
   function renderAccount(accountId: string, address: string, title?: string, isHardware?: boolean) {
     const isActive = accountId === selectedAccount;
-    const onClick = isActive || isLoading || isHardware ? undefined : () => setSelectedAccount(accountId);
+    const onClick = isActive || isLoading ? undefined : () => setSelectedAccount(accountId);
     const fullClassName = buildClassName(
       styles.account,
       isActive && styles.account_current,
       isLoading && styles.account_disabled,
-      isHardware && !isHardwareAllowed && styles.account_inactive,
     );
 
     return (
@@ -149,13 +142,17 @@ function DappConnectModal({
         key={accountId}
         className={fullClassName}
         aria-label={lang('Switch Account')}
-        title={isHardware && !isHardwareAllowed ? lang('Connecting dapps is not yet supported by Ledger.') : undefined}
         onClick={onClick}
       >
         {title && <span className={styles.accountName}>{title}</span>}
         <div className={styles.accountFooter}>
+          {isHardware && <i className={buildClassName('icon-ledger', isHardware && styles.iconLedger)} aria-hidden />}
           <span className={styles.accountAddress}>
-            {shortenAddress(address, ACCOUNT_ADDRESS_SHIFT, ACCOUNT_ADDRESS_SHIFT_END)}
+            {shortenAddress(
+              address,
+              isHardware ? HARDWARE_ACCOUNT_ADDRESS_SHIFT : ACCOUNT_ADDRESS_SHIFT,
+              ACCOUNT_ADDRESS_SHIFT_END,
+            )}
           </span>
         </div>
       </div>
@@ -174,7 +171,9 @@ function DappConnectModal({
         <p className={styles.label}>{lang('Select wallet to use on this dapp')}</p>
         <div className={fullClassName}>
           {iterableAccounts.map(
-            ([accountId, { title, address, isHardware }]) => renderAccount(accountId, address, title, isHardware),
+            ([accountId, { title, addressByChain, isHardware }]) => {
+              return renderAccount(accountId, addressByChain.ton, title, isHardware);
+            },
           )}
         </div>
       </>
@@ -195,16 +194,9 @@ function DappConnectModal({
           />
           {shouldRenderAccounts && renderAccounts()}
 
-          {isHardwareAccountSelected && !isHardwareAllowed && (
-            <div className={styles.warningForSingeHardwareAccount}>
-              {lang('Connecting dapps is not yet supported by Ledger.')}
-            </div>
-          )}
-
           <div className={styles.footer}>
             <Button
               isPrimary
-              isDisabled={isHardwareAccountSelected && !isHardwareAllowed}
               onClick={openConfirm}
             >
               {lang('Connect')}

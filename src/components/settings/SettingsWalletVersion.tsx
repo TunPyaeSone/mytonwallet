@@ -1,7 +1,7 @@
 import React, { memo } from '../../lib/teact/teact';
 import { getActions } from '../../global';
 
-import type { ApiWalletVersion } from '../../api/types';
+import type { ApiTonWalletVersion } from '../../api/chains/ton/types';
 
 import buildClassName from '../../util/buildClassName';
 import { shortenAddress } from '../../util/shortenAddress';
@@ -18,7 +18,7 @@ import styles from './Settings.module.scss';
 
 export interface Wallet {
   address: string;
-  version: ApiWalletVersion;
+  version: ApiTonWalletVersion;
   totalBalance: string;
   tokens: string[];
 }
@@ -28,7 +28,7 @@ interface OwnProps {
   handleBackClick: () => void;
   isInsideModal?: boolean;
   wallets?: Wallet[];
-  currentVersion?: ApiWalletVersion;
+  currentVersion?: ApiTonWalletVersion;
 }
 
 function SettingsWalletVersion({
@@ -54,7 +54,7 @@ function SettingsWalletVersion({
     isScrolled,
   } = useScrolledState();
 
-  const handleAddWallet = useLastCallback((version: ApiWalletVersion) => {
+  const handleAddWallet = useLastCallback((version: ApiTonWalletVersion) => {
     closeSettings();
     importAccountByVersion({ version });
   });
@@ -117,7 +117,7 @@ function SettingsWalletVersion({
         <div className={styles.blockWalletVersionReadMore}>
           {lang('$read_more_about_wallet_version', {
             ton_link: (
-              <a href="https://docs.ton.org/ko/participate/wallets/contracts" target="_blank" rel="noreferrer">
+              <a href="https://docs.ton.org/participate/wallets/contracts" target="_blank" rel="noreferrer">
                 ton.org
               </a>
             ),

@@ -1,9 +1,11 @@
 import React, {
-  memo, useEffect, useMemo, useState,
+  memo, useEffect, useMemo,
 } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
-import type { GlobalState, HardwareConnectState, UserToken } from '../../global/types';
+import type {
+  GlobalState, HardwareConnectState, SavedAddress, UserToken,
+} from '../../global/types';
 import { TransferState } from '../../global/types';
 
 import { BURN_ADDRESS, IS_CAPACITOR, NFT_BATCH_SIZE } from '../../config';
@@ -40,10 +42,11 @@ import styles from './Transfer.module.scss';
 interface StateProps {
   currentTransfer: GlobalState['currentTransfer'];
   tokens?: UserToken[];
-  savedAddresses?: Record<string, string>;
+  savedAddresses?: SavedAddress[];
   hardwareState?: HardwareConnectState;
   isLedgerConnected?: boolean;
   isTonAppConnected?: boolean;
+  isMediaViewerOpen?: boolean;
 }
 
 const SCREEN_HEIGHT_FOR_FORCE_FULLSIZE_NBS = 762; // Computed empirically
@@ -53,7 +56,6 @@ function TransferModal({
     state,
     amount,
     toAddress,
-    fee,
     comment,
     error,
     isLoading,
@@ -61,7 +63,8 @@ function TransferModal({
     tokenSlug,
     nfts,
     sentNftsCount,
-  }, tokens, savedAddresses, hardwareState, isLedgerConnected, isTonAppConnected,
+    dieselStatus,
+  }, tokens, savedAddresses, hardwareState, isLedgerConnected, isTonAppConnected, isMediaViewerOpen,
 }: StateProps) {
   const {
     submitTransferConfirm,
@@ -79,7 +82,6 @@ function TransferModal({
   const { screenHeight } = useWindowSize();
   const selectedToken = useMemo(() => tokens?.find((token) => token.slug === tokenSlug), [tokenSlug, tokens]);
   const decimals = selectedToken?.decimals;
-  const [renderedTokenBalance, setRenderedTokenBalance] = useState(selectedToken?.amount);
   const renderedTransactionAmount = usePrevious(amount, true);
   const symbol = selectedToken?.symbol || '';
   const isNftTransfer = Boolean(nfts?.length);
@@ -89,17 +91,11 @@ function TransferModal({
 
   useEffect(() => (
     state === TransferState.Confirm
-      ? captureKeyboardListeners({
-        onEnter: () => {
-          submitTransferConfirm();
-        },
-      })
+      ? captureKeyboardListeners({ onEnter: () => submitTransferConfirm() })
       : undefined
   ), [state, submitTransferConfirm]);
 
   const handleTransferSubmit = useLastCallback((password: string) => {
-    setRenderedTokenBalance(selectedToken?.amount);
-
     submitTransferPassword({ password });
   });
 
@@ -188,6 +184,7 @@ function TransferModal({
             error={error}
             onSubmit={handleTransferSubmit}
             onCancel={handleModalCloseWithReset}
+            isGaslessWithStars={dieselStatus === 'stars-fee'}
           >
             {renderTransferShortInfo()}
           </TransferPassword>
@@ -219,9 +216,6 @@ function TransferModal({
             nfts={nfts}
             amount={renderedTransactionAmount}
             symbol={symbol}
-            balance={renderedTokenBalance}
-            fee={fee}
-            operationAmount={amount}
             txId={txId}
             tokenSlug={tokenSlug}
             toAddress={toAddress}
@@ -243,7 +237,7 @@ function TransferModal({
 
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen={isOpen && !isMediaViewerOpen}
       noBackdropClose
       dialogClassName={styles.modalDialog}
       nativeBottomSheetKey="transfer"
@@ -281,5 +275,6 @@ export default memo(withGlobal((global): StateProps => {
     hardwareState,
     isLedgerConnected,
     isTonAppConnected,
+    isMediaViewerOpen: Boolean(global.mediaViewer.mediaId),
   };
 })(TransferModal));

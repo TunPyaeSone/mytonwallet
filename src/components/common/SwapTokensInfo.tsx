@@ -3,11 +3,13 @@ import React, { memo } from '../../lib/teact/teact';
 import type { ApiSwapAsset } from '../../api/types';
 import type { UserSwapToken } from '../../global/types';
 
+import { TOKEN_WITH_LABEL } from '../../config';
 import buildClassName from '../../util/buildClassName';
 import { formatCurrencyExtended } from '../../util/formatNumber';
-import getBlockchainNetworkName from '../../util/swap/getBlockchainNetworkName';
+import getChainNetworkName from '../../util/swap/getChainNetworkName';
 import getSwapRate from '../../util/swap/getSwapRate';
-import { ASSET_LOGO_PATHS } from '../ui/helpers/assetLogos';
+
+import TokenIcon from './TokenIcon';
 
 import styles from './SwapTokensInfo.module.scss';
 
@@ -23,19 +25,25 @@ function SwapTokensInfo({
   tokenIn, amountIn, tokenOut, amountOut, isError = false,
 }: OwnProps) {
   function renderTokenInfo(token?: UserSwapToken | ApiSwapAsset, amount = '0', isReceived = false) {
-    const image = token?.image ?? ASSET_LOGO_PATHS[token?.symbol.toLowerCase() as keyof typeof ASSET_LOGO_PATHS];
     const amountWithSign = isReceived ? amount : -amount;
+    const withLabel = Boolean(token && TOKEN_WITH_LABEL[token.slug]);
     return (
       <div className={styles.infoRow}>
         <div className={styles.infoRowToken}>
-          <img
-            src={image}
-            alt={token?.symbol}
-            className={styles.infoRowIcon}
-          />
+          {Boolean(token) && (
+            <TokenIcon
+              token={token}
+              withChainIcon
+            />
+          )}
           <div className={buildClassName(styles.infoRowText, styles.infoRowTextCenter)}>
-            <span className={styles.infoRowTitle}>{token?.name}</span>
-            <span className={styles.infoRowDescription}>{getBlockchainNetworkName(token?.blockchain)}</span>
+            <span className={styles.infoRowTitle}>
+              {token?.name}
+              {withLabel && (
+                <span className={buildClassName(styles.label, styles.chainLabel)}>{TOKEN_WITH_LABEL[token!.slug]}</span>
+              )}
+            </span>
+            <span className={styles.infoRowDescription}>{getChainNetworkName(token?.chain)}</span>
           </div>
         </div>
         <div className={buildClassName(styles.infoRowText, styles.infoRowTextRight, styles.infoRowTextCenter)}>

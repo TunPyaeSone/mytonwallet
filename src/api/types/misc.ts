@@ -1,22 +1,14 @@
+import type { DNS_ZONES_MAP } from '../chains/ton/constants';
+import type { ApiTonWalletVersion } from '../chains/ton/types';
 import type { ApiParsedPayload } from './payload';
 import type { ApiSseOptions } from './storage';
 
-export type ApiWalletVersion = 'simpleR1'
-| 'simpleR2'
-| 'simpleR3'
-| 'v2R1'
-| 'v2R2'
-| 'v3R1'
-| 'v3R2'
-| 'v4R2';
-
-export type ApiBlockchainKey = 'ton';
+export type ApiChain = 'ton' | 'tron';
 export type ApiNetwork = 'mainnet' | 'testnet';
 export type ApiLedgerDriver = 'HID' | 'USB';
 
 export interface AccountIdParsed {
   id: number;
-  blockchain: ApiBlockchainKey;
   network: ApiNetwork;
 }
 
@@ -27,20 +19,22 @@ export interface ApiInitArgs {
   isAndroidApp: boolean;
 }
 
-export interface ApiBaseToken {
+export interface ApiToken {
   name: string;
   symbol: string;
   slug: string;
   decimals: number;
-  minterAddress?: string;
+  chain: ApiChain;
+  tokenAddress?: string;
   image?: string;
   isPopular?: boolean;
   keywords?: string[];
   cmcSlug?: string;
   color?: string;
+  customPayloadApiUrl?: string;
 }
 
-export interface ApiToken extends ApiBaseToken {
+export interface ApiTokenWithPrice extends ApiToken {
   quote: ApiTokenPrice;
 }
 
@@ -59,7 +53,7 @@ export interface ApiAddressInfo {
   isMemoRequired?: boolean;
 }
 
-export type ApiTxIdBySlug = Record<string, string | undefined>;
+export type ApiTxTimestamps = Record<string, number | undefined>;
 export type ApiTransactionType = 'stake' | 'unstake' | 'unstakeRequest' | 'swap'
 | 'nftTransferred' | 'nftReceived' | undefined;
 
@@ -74,8 +68,8 @@ export interface ApiTransaction {
   fee: bigint;
   slug: string;
   isIncoming: boolean;
-  normalizedAddress: string;
-  inMsgHash: string;
+  normalizedAddress: string; // Only for TON now
+  inMsgHash?: string; // Only for TON
   shouldHide?: boolean;
   type?: ApiTransactionType;
   metadata?: ApiTransactionMetadata;
@@ -101,7 +95,6 @@ export interface ApiNft {
 }
 
 export type ApiHistoryList = Array<[number, number]>;
-export type ApiTokenSimple = Omit<ApiToken, 'quote'>;
 
 export type ApiStakingType = 'nominators' | 'liquid';
 
@@ -149,6 +142,7 @@ export interface ApiDappPermissions {
 export type ApiDappRequest = {
   origin?: string;
   accountId?: string;
+  identifier?: string;
   sseOptions?: ApiSseOptions;
 } | {
   origin: string;
@@ -164,32 +158,18 @@ export interface ApiDappTransfer {
   isScam?: boolean;
 }
 
-export interface ApiSubmitTransferOptions {
-  accountId: string;
-  password: string;
-  toAddress: string;
-  amount: bigint;
-  comment?: string;
-  tokenAddress?: string;
-  fee?: bigint;
-  shouldEncrypt?: boolean;
-  isBase64Data?: boolean;
-  withDiesel?: boolean;
-  dieselAmount?: bigint;
-}
-
-export enum Workchain {
-  MasterChain = -1,
-  BaseChain = 0,
-}
-
 export interface ApiSignedTransfer {
   base64: string;
   seqno: number;
   params: Omit<ApiLocalTransactionParams, 'inMsgHash'>;
 }
 
-export type ApiLocalTransactionParams = Omit<ApiTransaction, 'txId' | 'timestamp' | 'isIncoming' | 'normalizedAddress'>;
+export type ApiLocalTransactionParams = Omit<
+ApiTransaction, 'txId' | 'timestamp' | 'isIncoming' | 'normalizedAddress'
+> & {
+  txId?: string;
+  normalizedAddress?: string;
+};
 
 export type ApiBaseCurrency = 'USD' | 'EUR' | 'RUB' | 'CNY' | 'BTC' | 'TON';
 
@@ -205,8 +185,30 @@ export type ApiBalanceBySlug = Record<string, bigint>;
 
 export type ApiWalletInfo = {
   address: string;
-  version: ApiWalletVersion;
+  version: ApiTonWalletVersion;
   balance: bigint;
   isInitialized: boolean;
   lastTxId?: string;
 };
+
+export type ApiDnsZone = keyof typeof DNS_ZONES_MAP;
+
+// Country codes from ISO-3166-1 spec
+export type ApiCountryCode = 'AF' | 'AX' | 'AL' | 'DZ' | 'AS' | 'AD' | 'AO' | 'AI' | 'AQ' | 'AG' | 'AR'
+| 'AM' | 'AW' | 'AU' | 'AT' | 'AZ' | 'BS' | 'BH' | 'BD' | 'BB' | 'BY' | 'BE' | 'BZ' | 'BJ' | 'BM'
+| 'BT' | 'BO' | 'BQ' | 'BA' | 'BW' | 'BV' | 'BR' | 'IO' | 'BN' | 'BG' | 'BF' | 'BI' | 'CV' | 'KH'
+| 'CM' | 'CA' | 'KY' | 'CF' | 'TD' | 'CL' | 'CN' | 'CX' | 'CC' | 'CO' | 'KM' | 'CG' | 'CD' | 'CK'
+| 'CR' | 'CI' | 'HR' | 'CU' | 'CW' | 'CY' | 'CZ' | 'DK' | 'DJ' | 'DM' | 'DO' | 'EC' | 'EG' | 'SV'
+| 'GQ' | 'ER' | 'EE' | 'SZ' | 'ET' | 'FK' | 'FO' | 'FJ' | 'FI' | 'FR' | 'GF' | 'PF' | 'TF' | 'GA'
+| 'GM' | 'GE' | 'DE' | 'GH' | 'GI' | 'GR' | 'GL' | 'GD' | 'GP' | 'GU' | 'GT' | 'GG' | 'GN' | 'GW'
+| 'GY' | 'HT' | 'HM' | 'VA' | 'HN' | 'HK' | 'HU' | 'IS' | 'IN' | 'ID' | 'IR' | 'IQ' | 'IE' | 'IM'
+| 'IL' | 'IT' | 'JM' | 'JP' | 'JE' | 'JO' | 'KZ' | 'KE' | 'KI' | 'KP' | 'KR' | 'KW' | 'KG' | 'LA'
+| 'LV' | 'LB' | 'LS' | 'LR' | 'LY' | 'LI' | 'LT' | 'LU' | 'MO' | 'MG' | 'MW' | 'MY' | 'MV' | 'ML'
+| 'MT' | 'MH' | 'MQ' | 'MR' | 'MU' | 'YT' | 'MX' | 'FM' | 'MD' | 'MC' | 'MN' | 'ME' | 'MS' | 'MA'
+| 'MZ' | 'MM' | 'NA' | 'NR' | 'NP' | 'NL' | 'NC' | 'NZ' | 'NI' | 'NE' | 'NG' | 'NU' | 'NF' | 'MP'
+| 'NO' | 'OM' | 'PK' | 'PW' | 'PS' | 'PA' | 'PG' | 'PY' | 'PE' | 'PH' | 'PN' | 'PL' | 'PT' | 'PR'
+| 'QA' | 'MK' | 'RO' | 'RU' | 'RW' | 'RE' | 'BL' | 'SH' | 'KN' | 'LC' | 'MF' | 'PM' | 'VC' | 'WS'
+| 'SM' | 'ST' | 'SA' | 'SN' | 'RS' | 'SC' | 'SL' | 'SG' | 'SX' | 'SK' | 'SI' | 'SB' | 'SO' | 'ZA'
+| 'GS' | 'SS' | 'ES' | 'LK' | 'SD' | 'SR' | 'SJ' | 'SE' | 'CH' | 'SY' | 'TW' | 'TJ' | 'TZ' | 'TH'
+| 'TL' | 'TG' | 'TK' | 'TO' | 'TT' | 'TN' | 'TR' | 'TM' | 'TC' | 'TV' | 'UG' | 'UA' | 'AE' | 'GB'
+| 'US' | 'UM' | 'UY' | 'UZ' | 'VU' | 'VE' | 'VN' | 'VG' | 'VI' | 'WF' | 'EH' | 'YE' | 'ZM' | 'ZW';

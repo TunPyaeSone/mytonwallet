@@ -1,10 +1,12 @@
-import React, { memo, useMemo } from '../../lib/teact/teact';
+import React, {
+  memo, useEffect, useMemo, useState,
+} from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
 import type { GlobalState, HardwareConnectState, UserToken } from '../../global/types';
 import { TransferState } from '../../global/types';
 
-import { ANIMATED_STICKER_SMALL_SIZE_PX, IS_CAPACITOR, TONCOIN_SLUG } from '../../config';
+import { ANIMATED_STICKER_SMALL_SIZE_PX, IS_CAPACITOR, TONCOIN } from '../../config';
 import { selectCurrentAccountTokens } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import resolveModalTransitionName from '../../util/resolveModalTransitionName';
@@ -36,6 +38,7 @@ interface StateProps {
   hardwareState?: HardwareConnectState;
   isLedgerConnected?: boolean;
   isTonAppConnected?: boolean;
+  isMediaViewerOpen?: boolean;
 }
 
 function DappTransferModal({
@@ -51,6 +54,7 @@ function DappTransferModal({
   hardwareState,
   isLedgerConnected,
   isTonAppConnected,
+  isMediaViewerOpen,
 }: StateProps) {
   const {
     setDappTransferScreen,
@@ -62,14 +66,20 @@ function DappTransferModal({
   } = getActions();
 
   const lang = useLang();
-  const tonToken = useMemo(() => tokens?.find(({ slug }) => slug === TONCOIN_SLUG), [tokens])!;
+  const tonToken = useMemo(() => tokens?.find(({ slug }) => slug === TONCOIN.slug), [tokens])!;
 
   const isOpen = state !== TransferState.None;
 
+  const [forceFullNative, setForceFullNative] = useState(false);
   const { renderingKey, nextKey, updateNextKey } = useModalTransitionKeys(state, isOpen);
   const renderingTransactions = useCurrentOrPrev(transactions, true);
   const isNftTransfer = renderingTransactions?.[0].payload?.type === 'nft:transfer';
   const isDappLoading = dapp === undefined;
+  const withPayloadWarning = renderingTransactions?.[0].payload?.type === 'unknown';
+
+  useEffect(() => {
+    setForceFullNative(isOpen && (withPayloadWarning || renderingKey === TransferState.Password));
+  }, [withPayloadWarning, renderingKey, isOpen]);
 
   const handleBackClick = useLastCallback(() => {
     if (state === TransferState.Confirm || state === TransferState.Password) {
@@ -125,7 +135,7 @@ function DappTransferModal({
   function renderPassword(isActive: boolean) {
     return (
       <>
-        {!IS_CAPACITOR && <ModalHeader title={lang('Confirm Operation')} onClose={closeDappTransfer} />}
+        {!IS_CAPACITOR && <ModalHeader title={lang('Confirm Action')} onClose={closeDappTransfer} />}
         <PasswordForm
           isActive={isActive}
           isLoading={isLoading}
@@ -229,11 +239,11 @@ function DappTransferModal({
   return (
     <Modal
       hasCloseButton
-      isOpen={isOpen}
+      isOpen={isOpen && !isMediaViewerOpen}
       noBackdropClose
-      dialogClassName={styles.modalDialog}
+      dialogClassName={buildClassName(styles.modalDialog, withPayloadWarning && styles.modalDialogExtraHeight)}
       nativeBottomSheetKey="dapp-transfer"
-      forceFullNative={renderingKey === TransferState.Password}
+      forceFullNative={forceFullNative}
       onClose={closeDappTransfer}
       onCloseAnimationEnd={handleResetTransfer}
     >
@@ -264,5 +274,6 @@ export default memo(withGlobal((global): StateProps => {
     hardwareState,
     isLedgerConnected,
     isTonAppConnected,
+    isMediaViewerOpen: Boolean(global.mediaViewer.mediaId),
   };
 })(DappTransferModal));

@@ -15,7 +15,7 @@ import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import path from 'path';
 import type { Compiler, Configuration } from 'webpack';
 import {
-  DefinePlugin, EnvironmentPlugin, NormalModuleReplacementPlugin, ProvidePlugin,
+  DefinePlugin, EnvironmentPlugin, IgnorePlugin, NormalModuleReplacementPlugin, ProvidePlugin,
 } from 'webpack';
 
 import { PRODUCTION_URL } from './src/config';
@@ -43,6 +43,13 @@ const canUseStatoscope = !IS_EXTENSION && !IS_PACKAGED_ELECTRON && !IS_CAPACITOR
 const cspConnectSrcExtra = APP_ENV === 'development'
   ? `http://localhost:3000 ${process.env.CSP_CONNECT_SRC_EXTRA_URL}`
   : '';
+const cspFrameSrcExtra = [
+  'https://widget.changelly.com/',
+  'https://dreamwalkers.io/',
+  'https://avanchange.com/',
+  'https://pay.wata.pro/',
+  'https://royalpay.cc/',
+].join(' ');
 
 // The `connect-src` rule contains `https:` due to arbitrary requests are needed for jetton JSON configs.
 // The `img-src` rule contains `https:` due to arbitrary image URLs being used as jetton logos.
@@ -59,7 +66,7 @@ const CSP = `
   base-uri 'none';
   font-src 'self' https://fonts.gstatic.com/;
   form-action 'none';
-  frame-src 'self' https://widget.changelly.com/`
+  frame-src 'self' ${cspFrameSrcExtra};`
   .replace(/\s+/g, ' ').trim();
 
 const appVersion = require('./package.json').version;
@@ -75,12 +82,16 @@ export default function createConfig(
     target: 'web',
 
     optimization: {
+      minimize: APP_ENV === 'production',
       usedExports: true,
       ...(APP_ENV === 'staging' && {
         chunkIds: 'named',
       }),
       ...(IS_EXTENSION && {
         minimize: false,
+      }),
+      ...(IS_CAPACITOR && {
+        splitChunks: false,
       }),
     },
 
@@ -184,10 +195,13 @@ export default function createConfig(
       extensions: ['.js', '.ts', '.tsx'],
       fallback: {
         crypto: false,
+        stream: require.resolve('stream-browserify'),
       },
       alias: {
         // It is used to remove duplicate dependencies
         'bn.js': path.join(__dirname, 'node_modules/bn.js/lib/bn.js'),
+        // By default, the bundle for Node is imported
+        tronweb: path.join(__dirname, 'node_modules/tronweb/dist/TronWeb.js'),
       },
     },
 
@@ -223,6 +237,12 @@ export default function createConfig(
         fs.writeFile(defaultI18nFilename, defaultI18nJson, 'utf-8', () => {
           callback();
         });
+      }),
+      // Do not add the BIP39 word list in other languages
+      new IgnorePlugin({
+        checkResource(resource) {
+          return /.*\/wordlists\/(?!english).*\.json/.test(resource);
+        },
       }),
       new HtmlPlugin({
         template: 'src/index.html',
@@ -278,8 +298,10 @@ export default function createConfig(
         IS_EXTENSION: false,
         IS_FIREFOX_EXTENSION: false,
         IS_CAPACITOR: false,
+        IS_AIR_APP: false,
         SWAP_FEE_ADDRESS: null,
         DIESEL_ADDRESS: null,
+        GIVEAWAY_CHECKIN_URL: null,
       }),
       /* eslint-enable no-null/no-null */
       new DefinePlugin({

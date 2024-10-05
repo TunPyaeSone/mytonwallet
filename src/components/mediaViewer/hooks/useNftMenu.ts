@@ -8,10 +8,9 @@ import {
   GETGEMS_BASE_MAINNET_URL,
   GETGEMS_BASE_TESTNET_URL,
   TON_DNS_COLLECTION,
-  TON_EXPLORER_NAME,
 } from '../../../config';
 import { openUrl } from '../../../util/openUrl';
-import { getTonExplorerNftUrl } from '../../../util/url';
+import { getExplorerName, getExplorerNftUrl } from '../../../util/url';
 
 import { getIsPortrait } from '../../../hooks/useDeviceScreen';
 import useLastCallback from '../../../hooks/useLastCallback';
@@ -42,7 +41,7 @@ const GETGEMS_ITEM: DropdownItem = {
   fontIcon: 'external',
 };
 const TON_EXPLORER_ITEM: DropdownItem = {
-  name: TON_EXPLORER_NAME,
+  name: getExplorerName('ton'),
   value: 'tonExplorer',
   fontIcon: 'external',
 };
@@ -53,6 +52,14 @@ const COLLECTION_ITEM: DropdownItem = {
 const HIDE_ITEM: DropdownItem = {
   name: 'Hide',
   value: 'hide',
+};
+const NOT_SCAM: DropdownItem = {
+  name: 'Not Scam',
+  value: 'not_scam',
+};
+const UNHIDE: DropdownItem = {
+  name: 'Unhide',
+  value: 'unhide',
 };
 const BURN_ITEM: DropdownItem = {
   name: 'Burn',
@@ -65,9 +72,16 @@ const SELECT_ITEM: DropdownItem = {
   withSeparator: true,
 };
 
-export default function useNftMenu(nft?: ApiNft) {
+export default function useNftMenu(nft?: ApiNft, isNftBlacklisted?: boolean, isNftWhitelisted?: boolean) {
   const {
-    startTransfer, selectNfts, openNftCollection, burnNfts, openHideNftModal,
+    startTransfer,
+    selectNfts,
+    openNftCollection,
+    burnNfts,
+    addNftsToBlacklist,
+    addNftsToWhitelist,
+    closeMediaViewer,
+    openUnhideNftModal,
   } = getActions();
 
   const handleMenuItemSelect = useLastCallback((value: string) => {
@@ -78,11 +92,13 @@ export default function useNftMenu(nft?: ApiNft) {
           isPortrait: getIsPortrait(),
           nfts: [nft!],
         });
+        closeMediaViewer();
+
         break;
       }
 
       case 'tonExplorer': {
-        const url = getTonExplorerNftUrl(nft!.address, isTestnet)!;
+        const url = getExplorerNftUrl(nft!.address, isTestnet)!;
 
         openUrl(url);
         break;
@@ -124,13 +140,28 @@ export default function useNftMenu(nft?: ApiNft) {
       }
 
       case 'hide': {
-        openHideNftModal();
+        addNftsToBlacklist({ addresses: [nft!.address] });
+        closeMediaViewer();
+
+        break;
+      }
+
+      case 'not_scam': {
+        openUnhideNftModal({ address: nft!.address, name: nft!.name });
+
+        break;
+      }
+
+      case 'unhide': {
+        addNftsToWhitelist({ addresses: [nft!.address] });
+        closeMediaViewer();
 
         break;
       }
 
       case 'burn': {
         burnNfts({ nfts: [nft!] });
+        closeMediaViewer();
 
         break;
       }
@@ -152,13 +183,15 @@ export default function useNftMenu(nft?: ApiNft) {
       GETGEMS_ITEM,
       TON_EXPLORER_ITEM,
       ...(nft.collectionAddress ? [COLLECTION_ITEM] : []),
-      HIDE_ITEM,
+      ...((!nft.isScam && !isNftBlacklisted) || isNftWhitelisted ? [HIDE_ITEM] : []),
+      ...(nft.isScam && !isNftWhitelisted ? [NOT_SCAM] : []),
+      ...(!nft.isScam && isNftBlacklisted ? [UNHIDE] : []),
       ...(!nft.isOnSale ? [
         BURN_ITEM,
         SELECT_ITEM,
       ] : []),
     ];
-  }, [nft]);
+  }, [nft, isNftBlacklisted, isNftWhitelisted]);
 
   return { menuItems, handleMenuItemSelect };
 }

@@ -1,9 +1,11 @@
 import React, { memo } from '../../lib/teact/teact';
+import { withGlobal } from '../../global';
 
-import type { UserSwapToken } from '../../global/types';
+import type { Account, UserSwapToken } from '../../global/types';
 import { SwapType } from '../../global/types';
 
-import getBlockchainNetworkName from '../../util/swap/getBlockchainNetworkName';
+import { selectCurrentAccount } from '../../global/selectors';
+import getChainNetworkName from '../../util/swap/getChainNetworkName';
 import { ANIMATED_STICKERS_PATHS } from '../ui/helpers/animatedAssets';
 
 import useLang from '../../hooks/useLang';
@@ -29,6 +31,10 @@ interface OwnProps {
   onSecondButtonClick?: NoneToVoidFunction;
 }
 
+interface StateProps {
+  addressByChain?: Account['addressByChain'];
+}
+
 function SwapResult({
   tokenIn,
   tokenOut,
@@ -39,9 +45,10 @@ function SwapResult({
   secondButtonText,
   swapType,
   toAddress = '',
+  addressByChain,
   onFirstButtonClick,
   onSecondButtonClick,
-}: OwnProps) {
+}: OwnProps & StateProps) {
   const lang = useLang();
 
   function renderButtons() {
@@ -76,8 +83,22 @@ function SwapResult({
     );
   }
 
+  function renderTimeWarning() {
+    return (
+      <div className={styles.changellyInfoBlock}>
+        <span className={styles.changellyDescription}>
+          {lang('Please note that it may take up to a few hours for tokens to appear in your wallet.')}
+        </span>
+      </div>
+    );
+  }
+
   function renderChangellyInfo() {
-    if (swapType !== SwapType.CrosschainFromToncoin) return undefined;
+    if (swapType !== SwapType.CrosschainFromToncoin || (
+      toAddress && (toAddress === addressByChain?.ton || toAddress === addressByChain?.tron)
+    )) {
+      return undefined;
+    }
 
     return (
       <div className={styles.changellyInfoBlock}>
@@ -86,13 +107,14 @@ function SwapResult({
             lang('$swap_changelly_from_ton_description', {
               blockchain: (
                 <span className={styles.changellyDescriptionBold}>
-                  {getBlockchainNetworkName(tokenOut?.blockchain)}
+                  {getChainNetworkName(tokenOut?.chain)}
                 </span>
               ),
             })
           }
         </span>
         <InteractiveTextField
+          chain="ton"
           address={toAddress}
           copyNotification={lang('Address was copied!')}
           noSavedAddress
@@ -114,6 +136,7 @@ function SwapResult({
         amountOut={amountOut}
       />
 
+      {swapType !== SwapType.OnChain && renderTimeWarning()}
       {renderChangellyInfo()}
 
       {renderButtons()}
@@ -121,4 +144,8 @@ function SwapResult({
   );
 }
 
-export default memo(SwapResult);
+export default memo(withGlobal<OwnProps>((global): StateProps => {
+  return {
+    addressByChain: selectCurrentAccount(global)?.addressByChain,
+  };
+})(SwapResult));
